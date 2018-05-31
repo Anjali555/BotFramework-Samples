@@ -44,27 +44,41 @@ namespace ContosoCafe
         /// <returns>A task that represents the work queued to execute.</returns>
         private static async Task ProcessMessage(ITurnContext context)
         {
-            // Capture any input text.
-            var text = context.Activity.AsMessageActivity()?.Text?.Trim().ToLowerInvariant();
-            switch (text)
-            {
-                case "book table":
-                case "book a table":
-                    // Stub in the "book a table" conversation logic.
-                    var typing = Activity.CreateTypingActivity();
-                    var delay = new Activity { Type = "delay", Value = 5000 };
-                    await context.SendActivities(
-                        new IActivity[]
-                        {
-                            typing, delay,
-                            MessageFactory.Text("Your table is booked. Reference number: #K89HG38SZ")
-                        });
-                    break;
+            // Stub in dialog logic.
+            var state = ConversationState<ConversationData>.Get(context);
+            var dc = BookATable.Singleton.Value.CreateContext(context, state.DialogState);
 
-                default:
-                    // Provide a default response for anything we didn't understand.
-                    await context.SendActivity("I'm sorry; I do not understand.");
-                    break;
+            // If there's no active dialog, then this is a no-op.
+            await dc.Continue();
+
+            // If there were an active dialog, then it should have replied to the user.
+            if (!context.Responded)
+            {
+                // Capture any input text, and stub in responses for some of the input we want to handle.
+                var text = context.Activity.AsMessageActivity()?.Text?.Trim().ToLowerInvariant();
+                switch (text)
+                {
+                    case "help":
+                        // Provide some guidance to the user.
+                        await context.SendActivity("Type `book a table` to make a reservation.");
+                        break;
+
+                    case "who are you":
+                    case "who are you?":
+                        // Answer the "who are you" question.
+                        await context.SendActivity("Hi, I'm the Contoso Cafe bot.");
+                        break;
+
+                    case "book table":
+                    case "book a table":
+                        await dc.Begin(nameof(BookATable), state.DialogState);
+                        break;
+
+                    default:
+                        // Provide a default response for anything we didn't understand.
+                        await context.SendActivity("I'm sorry; I do not understand.");
+                        break;
+                }
             }
         }
     }
