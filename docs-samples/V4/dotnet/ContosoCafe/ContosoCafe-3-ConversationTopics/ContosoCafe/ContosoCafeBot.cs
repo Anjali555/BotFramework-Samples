@@ -44,21 +44,10 @@ namespace ContosoCafe
         /// <returns>A task that represents the work queued to execute.</returns>
         private static async Task ProcessMessage(ITurnContext context)
         {
-            // Capture any input text, and stub in responses for some of the input we want to handle.
+            // Capture any input text.
             var text = context.Activity.AsMessageActivity()?.Text?.Trim().ToLowerInvariant();
             switch (text)
             {
-                case "help":
-                    // Provide some guidance to the user.
-                    await context.SendActivity("Type `book a table` to make a reservation.");
-                    break;
-
-                case "who are you":
-                case "who are you?":
-                    // Answer the "who are you" question.
-                    await context.SendActivity("Hi, I'm the Contoso Cafe bot.");
-                    break;
-
                 case "book table":
                 case "book a table":
                     // Stub in the "book a table" conversation logic.
