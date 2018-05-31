@@ -226,7 +226,7 @@ async function SaveEntities( dc: DialogContext<TurnContext>, typedresult) {
         let cafelocation = typedresult.entities.cafeLocation;
 
         if (cafelocation) {
-            console.log(`location entity defined.${cafelocation}`);
+            console.log(`location entity detected.${cafelocation}`);
             // use first cafeLocation entity that was found in utterance
             dc.activeDialog.state.cafeLocation = cafelocation[0][0];
         }

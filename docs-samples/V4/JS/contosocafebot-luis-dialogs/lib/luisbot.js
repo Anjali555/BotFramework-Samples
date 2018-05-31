@@ -16,7 +16,6 @@ const restify = require("restify");
 const appId = "YOUR-LUIS-APP-ID";
 // Replace this with your authoring key
 const subscriptionKey = "YOUR-LUIS-SUBSCRIPTION-KEY";
-
 // Default is westus
 const serviceEndpoint = 'https://westus.api.cognitive.microsoft.com';
 const luisRec = new botbuilder_ai_1.LuisRecognizer({
@@ -202,7 +201,7 @@ function SaveEntities(dc, typedresult) {
             }
             let cafelocation = typedresult.entities.cafeLocation;
             if (cafelocation) {
-                console.log(`location entity defined.${cafelocation}`);
+                console.log(`location entity detected.${cafelocation}`);
                 // use first cafeLocation entity that was found in utterance
                 dc.activeDialog.state.cafeLocation = cafelocation[0][0];
             }
