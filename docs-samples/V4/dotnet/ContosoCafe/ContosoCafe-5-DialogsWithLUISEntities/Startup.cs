@@ -81,5 +81,13 @@ namespace ContosoCafeBot
                 .UseStaticFiles()
                 .UseBotFramework();
         }
+
+        public static (string modelId, string subscriptionId, Uri uri) GetLuisConfiguration(IConfiguration configuration, string serviceName)
+        {
+            var modelId = configuration.GetSection($"Luis-ModelId-{serviceName}")?.Value;
+            var subscriptionId = configuration.GetSection("Luis-SubscriptionKey")?.Value;
+            var uri = new Uri(configuration.GetSection("Luis-Url")?.Value);
+            return (modelId, subscriptionId, uri);
+        }
     }
 }

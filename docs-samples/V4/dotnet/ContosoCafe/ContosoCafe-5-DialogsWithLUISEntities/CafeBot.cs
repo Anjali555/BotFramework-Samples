@@ -11,21 +11,26 @@ using ContosoCafeBot.Dialogs;
 using Newtonsoft.Json.Linq;
 using Microsoft.Bot.Builder.Ai.LUIS;
 using Microsoft.Bot.Builder.Ai.QnA;
-
+using Microsoft.Extensions.Configuration;
 
 namespace ContosoCafeBot
 {
     public class CafeBot : IBot
     {
         private DialogSet _dialogs;
-        public CafeBot()
+        public CafeBot(IConfiguration configuration)
         {
             _dialogs = new DialogSet();
 
             _dialogs.Add("WhoAreYou", new WhoAreYou());
             _dialogs.Add("BookTable", new BookTable());
 
+            // Initialize LUIS based on ID and key in appsettings.json
+            var (luisModelId, luisSubscriptionKey, luisUri) = Startup.GetLuisConfiguration(configuration, "Cafe");
+            this.luisModelCafe = new LuisModel(luisModelId, luisSubscriptionKey, luisUri, Microsoft.Cognitive.LUIS.LuisApiVersion.V2);
         }
+
+        private LuisModel luisModelCafe;
         public async Task OnTurn(ITurnContext context)
         {
             //TODO: is this the right way to handle cards?
@@ -107,11 +112,8 @@ namespace ContosoCafeBot
 
         // method to crate LUIS Recognizer
         private LuisRecognizer createLUISRecognizer() {
-            return new LuisRecognizer(new LuisModel(
-                            "edaadd9b-b632-4733-a25c-5b67271035dd", 
-                            "be30825b782843dcbbe520ac5338f567", 
-                            new System.Uri("https://westus.api.cognitive.microsoft.com/luis/v2.0/apps/"), 
-                            Microsoft.Cognitive.LUIS.LuisApiVersion.V2), new LuisRecognizerOptions() { Verbose = true });
+            return new LuisRecognizer(this.luisModelCafe, 
+                new LuisRecognizerOptions() { Verbose = true });
         }
         // Methods to get QnA result
         private async Task getQnAResult(ITurnContext context) {
