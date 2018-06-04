@@ -44,16 +44,16 @@ namespace ContosoCafe
             // Define and add the waterfall steps for our dialog.
             this.Add(nameof(BookATable), new WaterfallStep[]
             {
-                // Begin booking a table.
                 async (dc, args, next) =>
                 {
+                    // Begin booking a table.
+
                     // Initialize state.
                     dc.ActiveDialog.State = new Dictionary<string,object>();
 
                     // Query for location.
                     var retryPrompt = MessageFactory.SuggestedActions(
                         Locations.ToList(), text: "Please select one of our locations.") as Activity;
-
                     await dc.Prompt(Keys.Location,
                         "Did you have a location in mind?", new ChoicePromptOptions
                         {
@@ -77,6 +77,8 @@ namespace ContosoCafe
                 async (dc, args, next) =>
                 {
                     // Update state with the date and time.
+                    // The prompt can return multiple interpretations of the time entered.
+                    // For now, just use the first one.
                     var answer = args["Resolution"] as List<DateTimeResult.DateTimeResolution>;
                     dc.ActiveDialog.State[Keys.DateTime] = answer[0].Value;
 
@@ -87,21 +89,59 @@ namespace ContosoCafe
                             RetryPromptString = "Please enter the number of people that the reservation is for.",
                         });
                 },
-                // What name should I book the table under?
-                // Ok. Should I go ahead and book a table for 3 at seattle for tomorrow at 3PM for Vishwac?
-                // Decide what to do if they say no at this point.
-                // Finish up booking a table.
                 async (dc, args, next) =>
                 {
-                    // Send a confirmation message.
-                    var typing = Activity.CreateTypingActivity();
-                    var delay = new Activity { Type = "delay", Value = 3000 };
-                    await dc.Context.SendActivities(
-                        new IActivity[]
+                    // Update state with the number of guests.
+                    var answer = (int)args["Value"];
+                    dc.ActiveDialog.State[Keys.Guests] = answer;
+
+                    // Query for a name for the resevation.
+                    await dc.Prompt(Keys.Name,
+                        "What name should I book the table under?", new PromptOptions
                         {
-                            typing, delay,
-                            MessageFactory.Text("Your table is booked. Reference number: #K89HG38SZ")
+                            RetryPromptString = "Please enter a name for the reservation.",
                         });
+                },
+                async (dc, args, next) =>
+                {
+                    // Update state with the name for the reservation.
+                    var answer = args["Value"] as string;
+                    dc.ActiveDialog.State[Keys.Name] = answer;
+
+                    // Confirm the resevation.
+                    await dc.Prompt(Keys.Confirm,
+                        $"Ok. Should I go ahead and book a table " +
+                        $"for {dc.ActiveDialog.State[Keys.Guests]} " +
+                        $"at {dc.ActiveDialog.State[Keys.Location]} " +
+                        $"for {dc.ActiveDialog.State[Keys.DateTime]} " +
+                        $"for {dc.ActiveDialog.State[Keys.Name]}?", new PromptOptions
+                        {
+                            RetryPromptString = "I'm sorry, should I make the reservation for you? " +
+                            "Please enter `yes` or `no`.",
+                        });
+                },
+                async (dc, args, next) =>
+                {
+                    // Finish up booking a table.
+                    var confirmed = (bool)args["Confirmation"];
+
+                    if (confirmed)
+                    {
+                        // Send a confirmation message.
+                        var typing = Activity.CreateTypingActivity();
+                        var delay = new Activity { Type = "delay", Value = 3000 };
+                        await dc.Context.SendActivities(
+                            new IActivity[]
+                            {
+                                typing, delay,
+                                MessageFactory.Text("Your table is booked. Reference number: #K89HG38SZ")
+                            });
+                    }
+                    else
+                    {
+                        // Decide what to do if they say no at this point.
+                        await dc.Context.SendActivity("Okay. We have canceled the reservation.");
+                    }
                 }
             });
         }

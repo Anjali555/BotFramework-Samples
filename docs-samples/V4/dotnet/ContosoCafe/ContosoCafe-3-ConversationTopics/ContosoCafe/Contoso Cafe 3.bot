@@ -1,0 +1,15 @@
+{
+    "name": "Contoso Cafe 3",
+    "description": "",
+    "secretKey": "",
+    "services": [
+        {
+            "id": "82c76600-6848-11e8-a30b-216a6fa0fb96",
+            "name": "Contoso Cafe 3",
+            "type": "endpoint",
+            "appId": "",
+            "appPassword": "",
+            "endpoint": "http://localhost:3978/api/messages"
+        }
+    ]
+}
