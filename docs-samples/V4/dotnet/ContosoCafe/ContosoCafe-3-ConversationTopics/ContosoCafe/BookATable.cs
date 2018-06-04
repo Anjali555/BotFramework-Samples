@@ -1,13 +1,11 @@
 ﻿using Microsoft.Bot.Builder.Core.Extensions;
 using Microsoft.Bot.Builder.Dialogs;
+using Microsoft.Bot.Builder.Dialogs.Choices;
 using Microsoft.Bot.Schema;
 using Microsoft.Recognizers.Text;
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using ChoiceFactory = Microsoft.Bot.Builder.Prompts.Choices.ChoiceFactory;
-using DateTimeResult = Microsoft.Bot.Builder.Prompts.DateTimeResult;
-using FoundChoice = Microsoft.Bot.Builder.Prompts.Choices.FoundChoice;
 
 namespace ContosoCafe
 {
@@ -17,7 +15,7 @@ namespace ContosoCafe
         /// The names of the prompts in this dialog.
         /// </summary>
         /// <remarks>We'll store the information gathered using these same names.</remarks>
-        public struct Prompts
+        public struct Keys
         {
             public const string Location = "location";
             public const string DateTime = "dateTime";
@@ -37,11 +35,11 @@ namespace ContosoCafe
         private BookATable()
         {
             // Add the prompts we'll be using in our dialog.
-            this.Add(Prompts.Location, new ChoicePrompt(Culture.English));
-            this.Add(Prompts.DateTime, new DateTimePrompt(Culture.English));
-            this.Add(Prompts.Guests, new NumberPrompt<int>(Culture.English));
-            this.Add(Prompts.Name, new TextPrompt());
-            this.Add(Prompts.Confirm, new ConfirmPrompt(Culture.English));
+            this.Add(Keys.Location, new ChoicePrompt(Culture.English));
+            this.Add(Keys.DateTime, new DateTimePrompt(Culture.English));
+            this.Add(Keys.Guests, new NumberPrompt<int>(Culture.English));
+            this.Add(Keys.Name, new TextPrompt());
+            this.Add(Keys.Confirm, new ConfirmPrompt(Culture.English));
 
             // Define and add the waterfall steps for our dialog.
             this.Add(nameof(BookATable), new WaterfallStep[]
@@ -56,7 +54,7 @@ namespace ContosoCafe
                     var retryPrompt = MessageFactory.SuggestedActions(
                         Locations.ToList(), text: "Please select one of our locations.") as Activity;
 
-                    await dc.Prompt(Prompts.Location,
+                    await dc.Prompt(Keys.Location,
                         "Did you have a location in mind?", new ChoicePromptOptions
                         {
                             RetryPromptActivity = retryPrompt,
@@ -67,10 +65,10 @@ namespace ContosoCafe
                 {
                     // Update state with the location.
                     var answer = args["Value"] as FoundChoice;
-                    dc.ActiveDialog.State[Prompts.Location] = answer.Value;
+                    dc.ActiveDialog.State[Keys.Location] = answer.Value;
 
                     // Query for date and time.
-                    await dc.Prompt(Prompts.DateTime,
+                    await dc.Prompt(Keys.DateTime,
                         "When will the reservation be for?", new PromptOptions
                         {
                             RetryPromptString = "Please enter a date and time for the reservation.",
@@ -80,10 +78,10 @@ namespace ContosoCafe
                 {
                     // Update state with the date and time.
                     var answer = args["Resolution"] as List<DateTimeResult.DateTimeResolution>;
-                    dc.ActiveDialog.State[Prompts.DateTime] = answer[0].Value;
+                    dc.ActiveDialog.State[Keys.DateTime] = answer[0].Value;
 
                     // Query for the number of guests.
-                    await dc.Prompt(Prompts.Guests,
+                    await dc.Prompt(Keys.Guests,
                         "How many guests?", new PromptOptions
                         {
                             RetryPromptString = "Please enter the number of people that the reservation is for.",

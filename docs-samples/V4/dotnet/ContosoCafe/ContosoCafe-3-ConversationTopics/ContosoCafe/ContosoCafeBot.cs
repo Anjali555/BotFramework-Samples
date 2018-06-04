@@ -1,9 +1,9 @@
-﻿using System.Linq;
-using System.Threading.Tasks;
-using Microsoft.Bot;
+﻿using Microsoft.Bot;
 using Microsoft.Bot.Builder;
 using Microsoft.Bot.Builder.Core.Extensions;
 using Microsoft.Bot.Schema;
+using System.Linq;
+using System.Threading.Tasks;
 
 namespace ContosoCafe
 {
@@ -65,10 +65,15 @@ namespace ContosoCafe
 
                     case "who are you":
                     case "who are you?":
+                    case "what are you":
+                    case "what are you?":
                         // Answer the "who are you" question.
                         await context.SendActivity("Hi, I'm the Contoso Cafe bot.");
                         break;
 
+                    case "book":
+                    case "table":
+                    case "a table":
                     case "book table":
                     case "book a table":
                         await dc.Begin(nameof(BookATable), state.DialogState);
