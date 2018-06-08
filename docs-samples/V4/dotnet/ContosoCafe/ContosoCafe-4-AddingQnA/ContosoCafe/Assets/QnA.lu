@@ -1,0 +1,26 @@
+﻿> QnA Maker LuDown file for the Contoso Cafe bot
+
+### ? What are your locations
+```markdown
+We have Cafe locations in Redmond, Seattle, Renton and Bellevue.
+
+
+```
+
+### ? Who is your CEO
+- Who owns Contoso Cafe
+```markdown
+Joshua Newmann is the CEO of Contoso Cafe.
+
+
+```
+
+### ? Are you hiring
+- Do you have any job openings
+- Are you looking for a barrista
+- Can I come work for Contoso Cafe
+```markdown
+You bet, we always are. Please visit [somesite](http://contoso.com).
+
+
+```

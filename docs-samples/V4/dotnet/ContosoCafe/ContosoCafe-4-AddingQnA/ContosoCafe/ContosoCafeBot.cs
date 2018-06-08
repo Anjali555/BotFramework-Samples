@@ -10,6 +10,11 @@ namespace ContosoCafe
 {
     public class ContosoCafeBot : IBot
     {
+        private static IEnumerable<string> CancelPhrases { get; } = new HashSet<string>
+        {
+            "cancel", "stop", "start over"
+        };
+
         public async Task OnTurn(ITurnContext context)
         {
             // Choose what to do based on the incoming activity type.
@@ -37,11 +42,6 @@ namespace ContosoCafe
                     break;
             }
         }
-
-        private static IEnumerable<string> CancelPhrases { get; } = new HashSet<string>
-        {
-            "cancel", "start over", "stop"
-        };
 
         /// <summary>
         /// Handle any message the user sends to the bot.

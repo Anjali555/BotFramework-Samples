@@ -1,19 +1,15 @@
-﻿using Microsoft.Bot.Builder;
-using Microsoft.Bot.Builder.Core.Extensions;
+﻿using Microsoft.Bot.Builder.Core.Extensions;
 using Microsoft.Bot.Builder.Dialogs;
 using Microsoft.Bot.Builder.Dialogs.Choices;
-using Microsoft.Bot.Builder.TraceExtensions;
 using Microsoft.Bot.Schema;
 using Microsoft.Recognizers.Text;
-using Microsoft.Recognizers.Text.DataTypes.TimexExpression;
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Threading.Tasks;
 
 namespace ContosoCafe
 {
-    public class BookATable : DialogSet
+    public class BookATable_WithoutValidation : DialogSet
     {
         /// <summary>
         /// The names of the prompts in this dialog.
@@ -34,19 +30,19 @@ namespace ContosoCafe
         public static IReadOnlyList<string> Locations { get; } =
             new List<string> { "Bellevue", "Redmond", "Renton", "Seattle" };
 
-        public static Lazy<BookATable> Singleton { get; } = new Lazy<BookATable>(new BookATable());
+        public static Lazy<BookATable_WithoutValidation> Singleton { get; } = new Lazy<BookATable_WithoutValidation>(new BookATable_WithoutValidation());
 
-        private BookATable()
+        private BookATable_WithoutValidation()
         {
             // Add the prompts we'll be using in our dialog.
             this.Add(Keys.Location, new ChoicePrompt(Culture.English));
-            this.Add(Keys.DateTime, new DateTimePrompt(Culture.English, DateTimeValidator));
-            this.Add(Keys.Guests, new NumberPrompt<int>(Culture.English, GuestsValidator));
+            this.Add(Keys.DateTime, new DateTimePrompt(Culture.English));
+            this.Add(Keys.Guests, new NumberPrompt<int>(Culture.English));
             this.Add(Keys.Name, new TextPrompt());
             this.Add(Keys.Confirm, new ConfirmPrompt(Culture.English));
 
             // Define and add the waterfall steps for our dialog.
-            this.Add(nameof(BookATable), new WaterfallStep[]
+            this.Add(nameof(BookATable_WithoutValidation), new WaterfallStep[]
             {
                 async (dc, args, next) =>
                 {
@@ -75,9 +71,7 @@ namespace ContosoCafe
                     await dc.Prompt(Keys.DateTime,
                         "When will the reservation be for?", new PromptOptions
                         {
-                            RetryPromptString =
-                                "I'm sorry, we only accept reservations for the next two weeks, 4PM-8PM.\n\n" +
-                                "Please enter a date and time for the reservation.",
+                            RetryPromptString = "Please enter a date and time for the reservation.",
                         });
                 },
                 async (dc, args, next) =>
@@ -86,7 +80,7 @@ namespace ContosoCafe
                     // The prompt can return multiple interpretations of the time entered.
                     // For now, just use the first one.
                     var answer = args["Resolution"] as List<DateTimeResult.DateTimeResolution>;
-                    dc.ActiveDialog.State[Keys.DateTime] = answer[0].Start;
+                    dc.ActiveDialog.State[Keys.DateTime] = answer[0].Value;
 
                     // Query for the number of guests.
                     await dc.Prompt(Keys.Guests,
@@ -150,76 +144,6 @@ namespace ContosoCafe
                     }
                 }
             });
-        }
-
-        private static async Task DateTimeValidator(ITurnContext context, DateTimeResult toValidate)
-        {
-            if (toValidate.Resolution.Count is 0)
-            {
-                toValidate.Status = PromptStatus.NotRecognized;
-                return;
-            }
-
-            // Find any matches within dates from this week or next (not in the past), and evenings only.
-            var constraints = new[]
-            {
-                TimexCreator.ThisWeek(),
-                TimexCreator.NextWeek(),
-                TimexCreator.Evening
-            };
-
-            List<TimexProperty> resolutions = null;
-            var candidates = toValidate.Resolution.Select(res => res.Timex).ToList();
-            try
-            {
-                resolutions = TimexRangeResolver.Evaluate(candidates, constraints);
-            }
-            catch (Exception ex)
-            {
-                await context.TraceActivity($"{nameof(ContosoCafeBot)} Exception", ex);
-                toValidate.Status = PromptStatus.NotRecognized;
-                return;
-            }
-
-            if (resolutions.Count is 0)
-            {
-                toValidate.Resolution.Clear();
-                toValidate.Status = PromptStatus.OutOfRange;
-                return;
-            }
-
-            // Use the first recognized value for the reservation.
-            var timex = resolutions[0];
-            DateTimeResult.DateTimeResolution resolution = new DateTimeResult.DateTimeResolution
-            {
-                Start = timex.ToNaturalLanguage(DateTime.Now),
-                End = timex.ToNaturalLanguage(DateTime.Now),
-                Value = timex.ToNaturalLanguage(DateTime.Now),
-                Timex = timex.TimexValue
-            };
-            toValidate.Resolution.Clear();
-            toValidate.Resolution.Add(resolution);
-            toValidate.Status = PromptStatus.Recognized;
-
-            return;
-        }
-
-        private static Task GuestsValidator(ITurnContext context, NumberResult<int> toValidate)
-        {
-            if (toValidate.Value < 1)
-            {
-                toValidate.Status = PromptStatus.TooSmall;
-            }
-            else if (toValidate.Value > 12)
-            {
-                toValidate.Status = PromptStatus.TooBig;
-            }
-            else
-            {
-                toValidate.Status = PromptStatus.Recognized;
-            }
-
-            return Task.CompletedTask;
         }
     }
 }
