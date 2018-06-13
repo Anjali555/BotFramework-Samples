@@ -1,0 +1,36 @@
+{
+  "urls": [],
+  "qnaList": [
+    {
+      "id": 0,
+      "answer": "We have Cafe locations in Redmond, Seattle, Renton and Bellevue.\r\n",
+      "questions": [
+        "What are your locations"
+      ],
+      "metadata": [],
+      "source": "custom editorial"
+    },
+    {
+      "id": 0,
+      "answer": "Joshua Newmann is the CEO of Contoso Cafe.\r\n",
+      "questions": [
+        "Who is your CEO",
+        "Who owns Contoso Cafe"
+      ],
+      "metadata": [],
+      "source": "custom editorial"
+    },
+    {
+      "id": 0,
+      "answer": "You bet, we always are. Please visit [somesite](http://contoso.com).\r\n",
+      "questions": [
+        "Are you hiring",
+        "Do you have any job openings",
+        "Are you looking for a barrista",
+        "Can I come work for Contoso Cafe"
+      ],
+      "metadata": [],
+      "source": "custom editorial"
+    }
+  ]
+}
