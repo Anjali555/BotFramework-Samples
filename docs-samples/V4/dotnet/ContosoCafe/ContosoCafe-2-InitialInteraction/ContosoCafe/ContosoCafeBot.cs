@@ -2,6 +2,7 @@
 using Microsoft.Bot.Builder;
 using Microsoft.Bot.Builder.Core.Extensions;
 using Microsoft.Bot.Schema;
+using System;
 using System.Linq;
 using System.Threading.Tasks;
 

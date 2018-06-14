@@ -2,6 +2,7 @@
 using Microsoft.Bot.Builder;
 using Microsoft.Bot.Builder.Core.Extensions;
 using Microsoft.Bot.Schema;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
@@ -17,6 +18,8 @@ namespace ContosoCafe
 
         public async Task OnTurn(ITurnContext context)
         {
+            var env = Environment.GetEnvironmentVariables();
+
             // Choose what to do based on the incoming activity type.
             switch (context.Activity.Type)
             {

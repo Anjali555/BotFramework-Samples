@@ -1,0 +1,15 @@
+{
+    "name": "ContosoCafe4",
+    "description": "",
+    "secretKey": "",
+    "services": [
+        {
+            "appId": "dbebf395-a239-4f37-b7f7-a107da6b1562",
+            "id": "d701c4f0-6f59-11e8-b17a-0156ce7b39a7",
+            "type": "endpoint",
+            "appPassword": "XK-VobD)h8ch=AJ:",
+            "endpoint": "http://localhost:3978/api/messages/",
+            "name": "http://localhost:3978/api/messages/"
+        }
+    ]
+}
