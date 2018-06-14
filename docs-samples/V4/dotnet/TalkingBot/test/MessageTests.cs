@@ -17,12 +17,12 @@ namespace test
             var input = "hi";
             var expectedOutput = "This is the wrong output.";
 
-            // This fails to fail.
+            // This check passes "unexpectedly" because test flow objects are effectively immutable.
             var flow = new TestFlow(adapter, bot.OnTurn);
             flow.Test(input, expectedOutput, "variation a");
             await flow.StartTest();
 
-           // This fails as expected.
+           // This check fails appropriately.
             await new TestFlow(adapter, bot.OnTurn)
                 .Test(input, expectedOutput, "variation b")
                 .StartTest();
