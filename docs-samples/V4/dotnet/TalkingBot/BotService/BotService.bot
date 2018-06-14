@@ -4,20 +4,12 @@
     "secretKey": "",
     "services": [
         {
-            "appId": "dbebf395-a239-4f37-b7f7-a107da6b1562",
+            "appId": "",
             "id": "http://localhost:3978/api/messages",
             "type": "endpoint",
-            "appPassword": "XK-VobD)h8ch=AJ:",
+            "appPassword": "",
             "endpoint": "http://localhost:3978/api/messages",
             "name": "BotService"
-        },
-        {
-            "type": "abs",
-            "name": "Talky Bot",
-            "id": "jf-botzilla",
-            "tenantId": "",
-            "subscriptionId": "0389857f-2464-451b-ac83-5f54d565b1a7",
-            "resourceGroup": "jf-botzilla"
         }
     ]
 }
