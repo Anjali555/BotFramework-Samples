@@ -54,7 +54,7 @@ namespace ContosoCafe
             }
             else
             {
-                await HandleSystemMessage(context);
+                await HandleSystemActivity(context);
             }
         }
 
@@ -62,7 +62,7 @@ namespace ContosoCafe
         /// Handle any non-message activity from the channel.
         /// </summary>
         /// <param name="context">The context object for this turn.</param>
-        private async Task HandleSystemMessage(ITurnContext context)
+        private async Task HandleSystemActivity(ITurnContext context)
         {
             switch (context.Activity.Type)
             {

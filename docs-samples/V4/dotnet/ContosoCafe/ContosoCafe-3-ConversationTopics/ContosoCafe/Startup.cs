@@ -1,4 +1,5 @@
-﻿using Microsoft.AspNetCore.Builder;
+﻿using System;
+using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.Bot.Builder.BotFramework;
 using Microsoft.Bot.Builder.Core.Extensions;
@@ -6,7 +7,6 @@ using Microsoft.Bot.Builder.Integration.AspNet.Core;
 using Microsoft.Bot.Builder.TraceExtensions;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
-using System;
 using System.IO;
 
 namespace ContosoCafe
@@ -28,33 +28,34 @@ namespace ContosoCafe
 
         public IConfiguration Configuration { get; }
 
-// This method gets called by the runtime. Use this method to add services to the container.
-public void ConfigureServices(IServiceCollection services)
-{
-    services.AddBot<ContosoCafeBot>(options =>
-    {
-        options.CredentialProvider = new ConfigurationCredentialProvider(Configuration);
-
-        // Trap exceptions and display them (in the Emulator), but show the user a friendly error message.
-        options.Middleware.Add(new CatchExceptionMiddleware<Exception>(async (context, exception) =>
+        // This method gets called by the runtime. Use this method to add services to the container.
+        // This method gets called by the runtime. Use this method to add services to the container.
+        public void ConfigureServices(IServiceCollection services)
         {
-            await context.TraceActivity(exception.GetType().FullName, exception);
-            await context.SendActivity("Sorry, it looks like something went wrong!");
-        }));
+            services.AddBot<ContosoCafeBot>(options =>
+            {
+                options.CredentialProvider = new ConfigurationCredentialProvider(Configuration);
 
-        // Use file storage and set up a dedicated directory for the bot.
-        // If you deploy this bot, you will need to use a different storage layer,
-        // such as AzureTableStorage, AzureBlobStorage, or CosmosDbStorage.
-        var path = Path.Combine(Path.GetTempPath(), nameof(ContosoCafeBot));
-        if (!Directory.Exists(path))
-        {
-            Directory.CreateDirectory(path);
+                // Trap exceptions and display them (in the Emulator), but show the user a friendly error message.
+                options.Middleware.Add(new CatchExceptionMiddleware<Exception>(async (context, exception) =>
+                {
+                    await context.TraceActivity(exception.GetType().FullName, exception);
+                    await context.SendActivity("Sorry, it looks like something went wrong!");
+                }));
+
+                // Use file storage and set up a dedicated directory for the bot.
+                // If you deploy this bot, you will need to use a different storage layer,
+                // such as AzureTableStorage, AzureBlobStorage, or CosmosDbStorage.
+                var path = Path.Combine(Path.GetTempPath(), nameof(ContosoCafeBot));
+                if (!Directory.Exists(path))
+                {
+                    Directory.CreateDirectory(path);
+                }
+                IStorage dataStore = new FileStorage(path);
+
+                options.Middleware.Add(new ConversationState<ConversationData>(dataStore));
+            });
         }
-        IStorage dataStore = new FileStorage(path);
-
-        options.Middleware.Add(new ConversationState<ConversationData>(dataStore));
-    });
-}
 
         // This method gets called by the runtime. Use this method to configure the HTTP request pipeline.
         public void Configure(IApplicationBuilder app, IHostingEnvironment env)
