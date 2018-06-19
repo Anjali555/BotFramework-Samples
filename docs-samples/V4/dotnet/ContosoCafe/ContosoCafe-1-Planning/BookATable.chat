@@ -1,4 +1,4 @@
-user=vishwac
+user=Jeffery
 bot=cafebot
 
 user: book a table
@@ -11,8 +11,8 @@ user: 3PM
 bot: How many guests?
 user: 3
 bot: What name should I book the table under?
-user: Vishwac
-bot: Ok. Should I go ahead and book a table for 3 at Seattle for tomorrow at 3PM for Vishwac?
+user: Jeffery
+bot: Ok. Should I go ahead and book a table for 3 at seattle for tomorrow at 3PM under Jeffery?
 user: yes
 bot: [Typing][Delay=3000]
-Your table is booked. Reference number: #K89HG38SZ.
+Your table is booked. Reference number: #K89HG38SZ

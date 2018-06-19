@@ -1,11 +1,14 @@
-user=vishwac
+user=Jeffery
 bot=cafebot
 
-user:What are your locations
-bot:We have Cafe locations in Redmond, Seattle, Renton, and Bellevue
+user:Who are you?
+bot:Hi, I'm the Contoso Cafe bot.
 
-user:who is your CEO
-bot:Joshua Newmann is the CEO of Contoso Cafe.
+user:What are your locations?
+bot:We have Cafe locations in Redmond, Seattle, Renton and Bellevue
 
-user:Are you hiring
-bot:You bet; we always are. Please visit http://contosocafe.com/careers.
+user:Who is your CEO?
+bot:Joshua Newmann is the CEO of Contoso Cafe
+
+user:Are you hiring?
+bot:You bet, we always are. Please visit http://contoso.com.

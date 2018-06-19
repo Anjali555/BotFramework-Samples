@@ -1,4 +1,5 @@
-user=vishwac
+user=Jeffery
 bot=cafebot
 
-bot: Hello, I'm the contoso cafe bot. How can I help you?
+bot: Hello, I'm the contoso cafe bot.
+bot: How can I help you? (Type `book a table` to set up a table reservation.)
