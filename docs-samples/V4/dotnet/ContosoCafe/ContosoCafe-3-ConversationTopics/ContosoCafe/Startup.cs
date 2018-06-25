@@ -7,7 +7,6 @@ using Microsoft.Bot.Builder.Integration.AspNet.Core;
 using Microsoft.Bot.Builder.TraceExtensions;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
-using System.IO;
 
 namespace ContosoCafe
 {
@@ -29,7 +28,6 @@ namespace ContosoCafe
         public IConfiguration Configuration { get; }
 
         // This method gets called by the runtime. Use this method to add services to the container.
-        // This method gets called by the runtime. Use this method to add services to the container.
         public void ConfigureServices(IServiceCollection services)
         {
             services.AddBot<ContosoCafeBot>(options =>
@@ -43,16 +41,9 @@ namespace ContosoCafe
                     await context.SendActivity("Sorry, it looks like something went wrong!");
                 }));
 
-                // Use file storage and set up a dedicated directory for the bot.
-                // If you deploy this bot, you will need to use a different storage layer,
-                // such as AzureTableStorage, AzureBlobStorage, or CosmosDbStorage.
-                var path = Path.Combine(Path.GetTempPath(), nameof(ContosoCafeBot));
-                if (!Directory.Exists(path))
-                {
-                    Directory.CreateDirectory(path);
-                }
-                IStorage dataStore = new FileStorage(path);
-
+                // Use in-memory storage for state for now. If you deploy this bot,
+                // you will need to use a different storage layer, such as CosmosDbStorage.
+                IStorage dataStore = new MemoryStorage();
                 options.Middleware.Add(new ConversationState<ConversationData>(dataStore));
             });
         }

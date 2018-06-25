@@ -15,11 +15,18 @@ namespace ContosoCafe
         /// <param name="context">The context object for this turn.</param>
         public async Task OnTurn(ITurnContext context)
         {
-            // Choose what to do based on the incoming activity type.
-            if (context.Activity.Type is ActivityTypes.Message)
+            // Handle message and non-message activities differently.
+            if (context.Activity.Type != ActivityTypes.Message)
             {
-                // Capture any input text, and stub in responses for some of the input we want to handle.
+                // Handle any non-message activity.
+                await HandleSystemActivity(context);
+            }
+            else
+            {
+                // Capture any input text.
                 var text = context.Activity.AsMessageActivity()?.Text?.Trim().ToLowerInvariant();
+
+                // Handle input from the user.
                 switch (text)
                 {
                     case "who are you":
@@ -52,10 +59,6 @@ namespace ContosoCafe
                         goto case "help";
                 }
             }
-            else
-            {
-                await HandleSystemActivity(context);
-            }
         }
 
         /// <summary>
@@ -66,6 +69,8 @@ namespace ContosoCafe
         {
             switch (context.Activity.Type)
             {
+                // Not all channels send a ConversationUpdate activity.
+                // However, both the Emulator and WebChat do.
                 case ActivityTypes.ConversationUpdate:
 
                     // If a user is being added to the conversation, send them an initial greeting.

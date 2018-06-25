@@ -11,6 +11,10 @@ namespace ContosoCafe
 {
     public class ContosoCafeBot : IBot
     {
+        /// <summary>
+        /// The set of phrases we recognize as the user cancelling a multi-step
+        /// conversation flow.
+        /// </summary>
         private static IEnumerable<string> CancelPhrases { get; } = new HashSet<string>
         {
             "cancel", "start over", "stop"
@@ -22,16 +26,22 @@ namespace ContosoCafe
         /// <param name="context">The context object for this turn.</param>
         public async Task OnTurn(ITurnContext context)
         {
-            // Choose what to do based on the incoming activity type.
-            if (context.Activity.Type is ActivityTypes.Message)
+            // Handle message and non-message activities differently.
+            if (context.Activity.Type != ActivityTypes.Message)
+            {
+                // Handle any non-message activity.
+                await HandleSystemActivity(context);
+            }
+            else
             {
                 // Get conversation state and establish a dialog context.
                 var state = ConversationState<ConversationData>.Get(context);
                 var dc = BookATable.Instance.CreateContext(context, state.DialogState);
 
-                // Capture any input text, and check for "cancel" before continuing any active dialog.
+                // Capture any input text.
                 var text = context.Activity.AsMessageActivity()?.Text?.Trim().ToLowerInvariant();
 
+                // Check for "cancel" before continuing any active dialog.
                 if (CancelPhrases.Contains(text))
                 {
                     // If there's no active dialog, this is a no-op.
@@ -39,15 +49,17 @@ namespace ContosoCafe
 
                     // Send a cancellation message and finish turn.
                     await context.SendActivity("Sure.. Let's start over");
-                    return;
                 }
 
-                // Continue any active dialog. If there's no active dialog, this is a no-op.
-                await dc.Continue();
-
-                // If there were an active dialog, then it should have replied to the user.
                 if (!context.Responded)
                 {
+                    // Continue any active dialog. If there's no active dialog, this is a no-op.
+                    await dc.Continue();
+                }
+
+                if (!context.Responded)
+                {
+                    // Handle any "command-like" input from the user.
                     switch (text)
                     {
                         case "who are you":
@@ -74,20 +86,18 @@ namespace ContosoCafe
                     }
                 }
             }
-            else
-            {
-                await HandleSystemActivity(context);
-            }
         }
 
         /// <summary>
-        /// Handle any non-message activity from the channel.
+        /// Handle any non-message activities from the channel.
         /// </summary>
         /// <param name="context">The context object for this turn.</param>
         private async Task HandleSystemActivity(ITurnContext context)
         {
             switch (context.Activity.Type)
             {
+                // Not all channels send a ConversationUpdate activity.
+                // However, both the Emulator and WebChat do.
                 case ActivityTypes.ConversationUpdate:
 
                     // If a user is being added to the conversation, send them an initial greeting.

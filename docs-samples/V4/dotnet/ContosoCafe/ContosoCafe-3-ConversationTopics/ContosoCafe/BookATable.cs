@@ -116,10 +116,9 @@ namespace ContosoCafe
             // Define and add the waterfall steps for our dialog.
             this.Add(nameof(BookATable), new WaterfallStep[]
             {
+                // Begin booking a table.
                 async (dc, args, next) =>
                 {
-                    // Begin booking a table.
-
                     // Initialize state.
                     dc.ActiveDialog.State = new Dictionary<string,object>();
 
