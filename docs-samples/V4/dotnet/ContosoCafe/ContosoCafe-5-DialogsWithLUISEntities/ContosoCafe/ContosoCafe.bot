@@ -1,0 +1,32 @@
+{
+    "name": "ContosoCafe",
+    "description": "",
+    "secretKey": "",
+    "services": [
+        {
+            "appId": "",
+            "id": "66d9e1d0-73ff-11e8-b337-8f46ef1c6061",
+            "type": "endpoint",
+            "appPassword": "",
+            "endpoint": "http://localhost:3978/api/messages",
+            "name": "ContosoCafeBot"
+        },
+        {
+            "kbId": "02a68e6d-7c44-44d6-9705-98b405c3dee4",
+            "name": "ContosoCafe",
+            "type": "qna",
+            "subscriptionKey": "bd4dfffaf22b416f84400f2ba63eb0a4",
+            "id": "",
+            "endpointKey": "b87f9820-1055-48ac-9460-326321e71dbe",
+            "hostname": "https://contosocafeqna.azurewebsites.net/qnamaker"
+        },
+      {
+        "id": "",
+        "name": "ContosoCafeApp",
+        "type": "luis",
+        "appId": "0529415a-008b-400e-8112-d41758156969",
+        "authoringKey": "cd7a50eb62894f7f9b3b4188a9533e63",
+        "version": "0.1"
+      }
+    ]
+}

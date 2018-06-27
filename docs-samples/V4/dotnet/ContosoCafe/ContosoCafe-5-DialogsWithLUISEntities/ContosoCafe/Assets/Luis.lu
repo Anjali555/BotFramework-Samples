@@ -1,0 +1,32 @@
+﻿> LUIS LUDown file for the Contoso Cafe bot
+
+# Help
+- Help
+- I need help
+- Please help
+
+# Reservation
+- Book a table for 5 at seattle for 7PM under {reservationName=Joe}
+- Reserve a table for 6 for {reservationName=Mary}
+- make a reservation at Bellevue for Sunday at 6pm
+- Reservation for six in Redmond tomorrow evening under {reservationName=Jeffery}
+
+# None
+- who are you
+- Joshua Newman
+
+$location:seattle=
+   - seattle
+>   - seattle center
+$location:redmond=
+   - redmond
+>   - redmond town center
+$location:bellevue=
+   - bellevue
+$location:renton=
+   - renton
+
+$PREBUILT:datetimeV2
+$PREBUILT:number
+
+$reservationName:Simple

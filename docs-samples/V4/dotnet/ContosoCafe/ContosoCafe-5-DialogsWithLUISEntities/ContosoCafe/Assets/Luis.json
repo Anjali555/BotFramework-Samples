@@ -1,0 +1,137 @@
+{
+  "intents": [
+    {
+      "name": "Help"
+    },
+    {
+      "name": "Reservation"
+    },
+    {
+      "name": "None"
+    }
+  ],
+  "entities": [
+    {
+      "name": "reservationName",
+      "roles": []
+    }
+  ],
+  "composites": [],
+  "closedLists": [
+    {
+      "name": "location",
+      "subLists": [
+        {
+          "canonicalForm": "seattle",
+          "list": [
+            "seattle"
+          ]
+        },
+        {
+          "canonicalForm": "redmond",
+          "list": [
+            "redmond"
+          ]
+        },
+        {
+          "canonicalForm": "bellevue",
+          "list": [
+            "bellevue"
+          ]
+        },
+        {
+          "canonicalForm": "renton",
+          "list": [
+            "renton"
+          ]
+        }
+      ],
+      "roles": []
+    }
+  ],
+  "regex_entities": [],
+  "model_features": [],
+  "regex_features": [],
+  "utterances": [
+    {
+      "text": "Help",
+      "intent": "Help",
+      "entities": []
+    },
+    {
+      "text": "I need help",
+      "intent": "Help",
+      "entities": []
+    },
+    {
+      "text": "Please help",
+      "intent": "Help",
+      "entities": []
+    },
+    {
+      "text": "Book a table for 5 at seattle for 7PM under Joe",
+      "intent": "Reservation",
+      "entities": [
+        {
+          "entity": "reservationName",
+          "startPos": 44,
+          "endPos": 46
+        }
+      ]
+    },
+    {
+      "text": "Reserve a table for 6 for Mary",
+      "intent": "Reservation",
+      "entities": [
+        {
+          "entity": "reservationName",
+          "startPos": 26,
+          "endPos": 29
+        }
+      ]
+    },
+    {
+      "text": "make a reservation at Bellevue for Sunday at 6pm",
+      "intent": "Reservation",
+      "entities": []
+    },
+    {
+      "text": "Reservation for six in Redmond tomorrow evening under Jeffery",
+      "intent": "Reservation",
+      "entities": [
+        {
+          "entity": "reservationName",
+          "startPos": 54,
+          "endPos": 60
+        }
+      ]
+    },
+    {
+      "text": "who are you",
+      "intent": "None",
+      "entities": []
+    },
+    {
+      "text": "Joshua Newman",
+      "intent": "None",
+      "entities": []
+    }
+  ],
+  "patterns": [],
+  "patternAnyEntities": [],
+  "prebuiltEntities": [
+    {
+      "name": "datetimeV2",
+      "roles": []
+    },
+    {
+      "name": "number",
+      "roles": []
+    }
+  ],
+  "luis_schema_version": "3.0.0",
+  "versionId": "0.1",
+  "name": "Luis",
+  "desc": "",
+  "culture": "en-us"
+}
