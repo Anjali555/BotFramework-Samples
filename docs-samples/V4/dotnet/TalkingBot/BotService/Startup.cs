@@ -2,8 +2,8 @@
 using bot;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
+using Microsoft.Bot.Builder;
 using Microsoft.Bot.Builder.BotFramework;
-using Microsoft.Bot.Builder.Core.Extensions;
 using Microsoft.Bot.Builder.Integration.AspNet.Core;
 using Microsoft.Bot.Builder.TraceExtensions;
 using Microsoft.Extensions.Configuration;
@@ -34,11 +34,6 @@ namespace BotService
             services.AddBot<TalkingBot>(options =>
             {
                 options.CredentialProvider = new ConfigurationCredentialProvider(Configuration);
-                options.Middleware.Add(new CatchExceptionMiddleware<Exception>(async (context, exception) =>
-                {
-                    await context.TraceActivity("EchoBot Exception", exception);
-                    await context.SendActivity("Sorry, it looks like something went wrong!");
-                }));
                 options.Middleware.Add(new ConversationState<ConvInfo>(new MemoryStorage()));
             });
         }
