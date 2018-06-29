@@ -165,30 +165,27 @@ namespace ContosoCafe
                 async (dc, args, next) =>
                 {
                     // Initialize state.
-                    dc.ActiveDialog.State = new Dictionary<string,object>();
-
-                    // Add any LUIS entities to the active dialog state.
                     if(args!=null && args.ContainsKey(Keys.LuisArgs))
                     {
+                        // Add any LUIS entities to the active dialog state.
                         // Remove any values that don't validate, and convert the remainder to a dictionary.
                         var entities = (CafeLuisModel._Entities)args[Keys.LuisArgs];
-                        dc.ActiveDialog.State[Keys.LuisArgs] = ValidateLuisArgs(entities);
-                    }
-
-                    // Check whether input for location already exists
-                    var luisargs = GetLuisArgs(dc);
-                    if (luisargs.ContainsKey(Keys.Location))
-                    {
-                        // If we have an entity value from LUIS for this step, pass this value to the next step
-                        // as if it were output from the prompt in this step.
-                        await next(new Dictionary<string,object>
-                        {
-                            ["Value"] = new FoundChoice { Value = luisargs[Keys.Location] as string }
-                        });
+                        dc.ActiveDialog.State = ValidateLuisArgs(entities);
                     }
                     else
                     {
-                        // Query for location.
+                        // Begin without any information collected.
+                        dc.ActiveDialog.State = new Dictionary<string,object>();
+                    }
+
+                    if (dc.ActiveDialog.State.ContainsKey(Keys.Location))
+                    {
+                        // If we already have the location, continue on to the next waterfall step.
+                        await next();
+                    }
+                    else
+                    {
+                        // Otherwise, query for location.
                         var retryPrompt = MessageFactory.SuggestedActions(
                             Locations.ToList(), text: "Please select one of our locations.") as Activity;
                         await dc.Prompt(Keys.Location,
@@ -201,30 +198,21 @@ namespace ContosoCafe
                 },
                 async (dc, args, next) =>
                 {
-                    // Update state with the location.
-                    var answer = args["Value"] as FoundChoice;
-                    dc.ActiveDialog.State[Keys.Location] = answer.Value;
-
-                    // Check whether input for reservation time already exists
-                    var luisargs = GetLuisArgs(dc);
-                    if (luisargs.ContainsKey(Keys.DateTime))
+                    if (!dc.ActiveDialog.State.ContainsKey(Keys.Location))
                     {
-                        // If we have an entity value from LUIS for this step, pass this value to the next step
-                        // as if it were output from the prompt in this step.
-                        await next(new Dictionary<string,object>
-                        {
-                            ["Resolution"] = new List<DateTimeResult.DateTimeResolution>
-                            {
-                                new DateTimeResult.DateTimeResolution
-                                {
-                                    Value = luisargs[Keys.DateTime] as string
-                                }
-                            }
-                        });
+                        // Update state with the prompt result.
+                        var answer = args["Value"] as FoundChoice;
+                        dc.ActiveDialog.State[Keys.Location] = answer.Value;
+                    }
+
+                    if (dc.ActiveDialog.State.ContainsKey(Keys.DateTime))
+                    {
+                        // If we already have the reservation date and time, continue on to the next waterfall step.
+                        await next();
                     }
                     else
                     {
-                        // Query for date and time.
+                        // Otherwise, query for the reservation date and time.
                         await dc.Prompt(Keys.DateTime,
                             "When will the reservation be for?", new PromptOptions
                             {
@@ -235,26 +223,23 @@ namespace ContosoCafe
                 },
                 async (dc, args, next) =>
                 {
-                    // Update state with the date and time.
-                    // The prompt can return multiple interpretations of the time entered.
-                    // For now, just use the first one.
-                    var answer = args["Resolution"] as List<DateTimeResult.DateTimeResolution>;
-                    dc.ActiveDialog.State[Keys.DateTime] = answer[0].Value;
-
-                    // Check whether input for the number of guests already exists
-                    var luisargs = GetLuisArgs(dc);
-                    if (luisargs.ContainsKey(Keys.Guests))
+                    if (!dc.ActiveDialog.State.ContainsKey(Keys.DateTime))
                     {
-                        // If we have an entity value from LUIS for this step, pass this value to the next step
-                        // as if it were output from the prompt in this step.
-                        await next(new Dictionary<string,object>
-                        {
-                            ["Value"] = (int)luisargs[Keys.Guests]
-                        });
+                        // Update state with the prompt result.
+                        // The prompt can return multiple interpretations of the time entered.
+                        // For now, just use the first one.
+                        var answer = args["Resolution"] as List<DateTimeResult.DateTimeResolution>;
+                        dc.ActiveDialog.State[Keys.DateTime] = answer[0].Value;
+                    }
+
+                    if (dc.ActiveDialog.State.ContainsKey(Keys.Guests))
+                    {
+                        // If we already have the number of guests, continue on to the next waterfall step.
+                        await next();
                     }
                     else
                     {
-                        // Query for the number of guests.
+                        // Otherwise, query for the information.
                         await dc.Prompt(Keys.Guests,
                             "How many guests?", new PromptOptions
                             {
@@ -265,24 +250,21 @@ namespace ContosoCafe
                 },
                 async (dc, args, next) =>
                 {
-                    // Update state with the number of guests.
-                    var answer = (int)args["Value"];
-                    dc.ActiveDialog.State[Keys.Guests] = answer;
-
-                    // Check whether input for the reservation name already exists
-                    var luisargs = GetLuisArgs(dc);
-                    if (luisargs.ContainsKey(Keys.Name))
+                    if (!dc.ActiveDialog.State.ContainsKey(Keys.Guests))
                     {
-                        // If we have an entity value from LUIS for this step, pass this value to the next step
-                        // as if it were output from the prompt in this step.
-                        await next(new Dictionary<string,object>
-                        {
-                            ["Value"] = luisargs[Keys.Name] as string
-                        });
+                        // Update state from the prompt result.
+                        var answer = (int)args["Value"];
+                        dc.ActiveDialog.State[Keys.Guests] = answer;
+                    }
+
+                    if (dc.ActiveDialog.State.ContainsKey(Keys.Name))
+                    {
+                        // If we already have the reservation name, continue on to the next waterfall step.
+                        await next();
                     }
                     else
                     {
-                        // Query for a name for the resevation.
+                        // Otherwise, query for the information.
                         await dc.Prompt(Keys.Name,
                             "What name should I book the table under?", new PromptOptions
                             {
@@ -292,11 +274,14 @@ namespace ContosoCafe
                 },
                 async (dc, args, next) =>
                 {
-                    // Update state with the name for the reservation.
-                    var answer = args["Value"] as string;
-                    dc.ActiveDialog.State[Keys.Name] = answer;
+                    if (!dc.ActiveDialog.State.ContainsKey(Keys.Name))
+                    {
+                        // Update state from the prompt result.
+                        var answer = args["Value"] as string;
+                        dc.ActiveDialog.State[Keys.Name] = answer;
+                    }
 
-                    // Confirm the resevation.
+                    // Confirm the reservation.
                     await dc.Prompt(Keys.Confirm,
                         $"Ok. Should I go ahead and book a table " +
                         $"for {dc.ActiveDialog.State[Keys.Guests]} " +
@@ -326,6 +311,12 @@ namespace ContosoCafe
                                 typing, delay,
                                 MessageFactory.Text("Your table is booked. Reference number: #K89HG38SZ")
                             });
+
+                        // As part of the process to fill the reservation, the relevant data would be persisted
+                        // in the reservation system. Here, we are saving the dialog state to conversations state
+                        // as a simulation of this process.
+                        var conversationState = ConversationState<ConversationData>.Get(dc.Context);
+                        conversationState.ReservationData = new Dictionary<string,object>(dc.ActiveDialog.State);
                     }
                     else
                     {
@@ -334,16 +325,6 @@ namespace ContosoCafe
                     }
                 }
             });
-        }
-
-        /// <summary>
-        /// Helper method to get the LUIS arguments from the dialog state.
-        /// </summary>
-        /// <param name="dc">The dialog context from which to retrieve state.</param>
-        /// <returns>A dictionary of values extracted from any LUIS entities added to the dialog via the call to dc.Begin.</returns>
-        private static Dictionary<string, object> GetLuisArgs(DialogContext dc)
-        {
-            return dc.ActiveDialog.State[Keys.LuisArgs] as Dictionary<string, object>;
         }
 
         /// <summary>
@@ -379,7 +360,7 @@ namespace ContosoCafe
                 if (number != 0)
                 {
                     // LUIS recognizes numbers as doubles. Convert to int.
-                    result[Keys.Guests] = (int)number;
+                    result[Keys.Guests] = Convert.ToInt32(number);
                 }
             }
 
