@@ -1,4 +1,7 @@
-﻿namespace ContosoCafe
+﻿// Copyright (c) Microsoft Corporation. All rights reserved.
+// Licensed under the MIT License
+
+namespace ContosoCafe
 {
     using System;
     using System.Collections.Generic;
