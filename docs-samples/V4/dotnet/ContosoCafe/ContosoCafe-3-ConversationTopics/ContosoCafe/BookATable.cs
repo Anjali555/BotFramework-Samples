@@ -1,41 +1,61 @@
-﻿using Microsoft.Bot.Builder;
-using Microsoft.Bot.Builder.Core.Extensions;
-using Microsoft.Bot.Builder.Dialogs;
-using Microsoft.Bot.Builder.Dialogs.Choices;
-using Microsoft.Bot.Builder.TraceExtensions;
-using Microsoft.Bot.Schema;
-using Microsoft.Recognizers.Text;
-using Microsoft.Recognizers.Text.DataTypes.TimexExpression;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Threading.Tasks;
-
-namespace ContosoCafe
+﻿namespace ContosoCafe
 {
+    using System;
+    using System.Collections.Generic;
+    using System.Linq;
+    using System.Threading.Tasks;
+    using Microsoft.Bot.Builder;
+    using Microsoft.Bot.Builder.Dialogs;
+    using Microsoft.Bot.Builder.Dialogs.Choices;
+    using Microsoft.Bot.Builder.TraceExtensions;
+    using Microsoft.Bot.Schema;
+    using Microsoft.Recognizers.Text;
+    using Microsoft.Recognizers.Text.DataTypes.TimexExpression;
+
+    /// <summary>
+    /// Defines the dialog for booking a table.
+    /// </summary>
     public class BookATable : DialogSet
     {
-        public static BookATable Instance { get; } = new Lazy<BookATable>(new BookATable()).Value;
-
         /// <summary>
-        /// The names of the prompts in this dialog.
+        /// The names of the inputs and prompts in this dialog.
         /// </summary>
         /// <remarks>We'll store the information gathered using these same names.</remarks>
         public struct Keys
         {
+            /// <summary>Key to use for LUIS entities as input.</summary>
+            public const string LuisArgs = "LuisEntities";
+
+            /// <summary>Key to use for location.</summary>
             public const string Location = "location";
+
+            /// <summary>Key to use for reservation date.</summary>
             public const string DateTime = "dateTime";
+
+            /// <summary>Key to use for party size.</summary>
             public const string Guests = "numberOfGuests";
+
+            /// <summary>Key to use for reservation name.</summary>
             public const string Name = "reservationName";
+
+            /// <summary>Key to use for the confirm prompt.</summary>
             public const string Confirm = "confirmation";
         }
 
         /// <summary>
-        /// The list of store locations.
+        /// Gets the list of store locations.
         /// </summary>
         public static IReadOnlyList<string> Locations { get; } =
             new List<string> { "Bellevue", "Redmond", "Renton", "Seattle" };
 
+        /// <summary>
+        /// The validatior to use with the reservation date and time prompt.
+        /// </summary>
+        /// <param name="context">The current turn context.</param>
+        /// <param name="toValidate">The input to be validated.</param>
+        /// <returns>An updated <paramref name="toValidate"/> value that sets the object's
+        /// Prompt status to indicate whether the value validates.</returns>
+        /// <remarks>Valid dates are evenings within the next 2 weeks.</remarks>
         private static async Task DateTimeValidator(ITurnContext context, DateTimeResult toValidate)
         {
             if (toValidate.Resolution.Count is 0)
@@ -58,7 +78,7 @@ namespace ContosoCafe
             }
             catch (Exception ex)
             {
-                await context.TraceActivity($"{ex.GetType().Name} in date time validator", ex);
+                await context.TraceActivityAsync($"{ex.GetType().Name} in date time validator", ex);
                 toValidate.Status = PromptStatus.NotRecognized;
                 return;
             }
@@ -86,6 +106,14 @@ namespace ContosoCafe
             return;
         }
 
+        /// <summary>
+        /// The validatior to use with the number of guests prompt.
+        /// </summary>
+        /// <param name="context">The current turn context.</param>
+        /// <param name="toValidate">The input to be validated.</param>
+        /// <returns>An updated <paramref name="toValidate"/> value that sets the object's
+        /// Prompt status to indicate whether the value validates.</returns>
+        /// <remarks>Valid party sizes are 1 through 12.</remarks>
         private static Task GuestsValidator(ITurnContext context, NumberResult<int> toValidate)
         {
             if (toValidate.Value < 1)
@@ -104,7 +132,10 @@ namespace ContosoCafe
             return Task.CompletedTask;
         }
 
-        private BookATable()
+        /// <summary>
+        /// Initializes a new instance of the <see cref="BookATable"/> class.
+        /// </summary>
+        public BookATable()
         {
             // Add the prompts we'll be using in our dialog.
             this.Add(Keys.Location, new ChoicePrompt(Culture.English));
@@ -120,27 +151,31 @@ namespace ContosoCafe
                 async (dc, args, next) =>
                 {
                     // Initialize state.
-                    dc.ActiveDialog.State = new Dictionary<string,object>();
+                    dc.ActiveDialog.State = new Dictionary<string, object>();
 
-                    // Query for location.
+                    // Prompt for location.
                     var retryPrompt = MessageFactory.SuggestedActions(
                         Locations.ToList(), text: "Please select one of our locations.") as Activity;
-                    await dc.Prompt(Keys.Location,
-                        "Did you have a location in mind?", new ChoicePromptOptions
+                    await dc.PromptAsync(
+                        Keys.Location,
+                        "Did you have a location in mind?",
+                        new ChoicePromptOptions
                         {
                             RetryPromptActivity = retryPrompt,
-                            Choices = ChoiceFactory.ToChoices(new List<string>(Locations))
+                            Choices = ChoiceFactory.ToChoices(new List<string>(Locations)),
                         });
                 },
                 async (dc, args, next) =>
                 {
-                    // Update state with the location.
+                    // Update state with the prompt result.
                     var answer = args["Value"] as FoundChoice;
                     dc.ActiveDialog.State[Keys.Location] = answer.Value;
 
-                    // Query for date and time.
-                    await dc.Prompt(Keys.DateTime,
-                        "When will the reservation be for?", new PromptOptions
+                    // Prompt for the reservation date and time.
+                    await dc.PromptAsync(
+                        Keys.DateTime,
+                        "When will the reservation be for?",
+                        new PromptOptions
                         {
                             RetryPromptString = "Please enter a date and time for the reservation.\n\n" +
                             "We take reservations within two weeks of today, and evenings only.",
@@ -148,15 +183,17 @@ namespace ContosoCafe
                 },
                 async (dc, args, next) =>
                 {
-                    // Update state with the date and time.
+                    // Update state from the prompt result.
                     // The prompt can return multiple interpretations of the time entered.
                     // For now, just use the first one.
                     var answer = args["Resolution"] as List<DateTimeResult.DateTimeResolution>;
                     dc.ActiveDialog.State[Keys.DateTime] = answer[0].Value;
 
-                    // Query for the number of guests.
-                    await dc.Prompt(Keys.Guests,
-                        "How many guests?", new PromptOptions
+                    // Prompt for the party size.
+                    await dc.PromptAsync(
+                        Keys.Guests,
+                        "How many guests?",
+                        new PromptOptions
                         {
                             RetryPromptString = "Please enter the number of people that the reservation is for.\n\n" +
                             "We can take reservations for parties of up to 12.",
@@ -164,30 +201,34 @@ namespace ContosoCafe
                 },
                 async (dc, args, next) =>
                 {
-                    // Update state with the number of guests.
+                    // Update state from the prompt result.
                     var answer = (int)args["Value"];
                     dc.ActiveDialog.State[Keys.Guests] = answer;
 
-                    // Query for a name for the resevation.
-                    await dc.Prompt(Keys.Name,
-                        "What name should I book the table under?", new PromptOptions
+                    // Prompt for the reservtion name.
+                    await dc.PromptAsync(
+                        Keys.Name,
+                        "What name should I book the table under?",
+                        new PromptOptions
                         {
                             RetryPromptString = "Please enter a name for the reservation.",
                         });
                 },
                 async (dc, args, next) =>
                 {
-                    // Update state with the name for the reservation.
+                    // Update state from the prompt result.
                     var answer = args["Value"] as string;
                     dc.ActiveDialog.State[Keys.Name] = answer;
 
-                    // Confirm the resevation.
-                    await dc.Prompt(Keys.Confirm,
+                    // Confirm the reservation.
+                    await dc.PromptAsync(
+                        Keys.Confirm,
                         $"Ok. Should I go ahead and book a table " +
-                        $"for {dc.ActiveDialog.State[Keys.Guests]} " +
-                        $"at {dc.ActiveDialog.State[Keys.Location]} " +
-                        $"for {dc.ActiveDialog.State[Keys.DateTime]} " +
-                        $"for {dc.ActiveDialog.State[Keys.Name]}?", new PromptOptions
+                            $"for {dc.ActiveDialog.State[Keys.Guests]} " +
+                            $"at {dc.ActiveDialog.State[Keys.Location]} " +
+                            $"for {dc.ActiveDialog.State[Keys.DateTime]} " +
+                            $"for {dc.ActiveDialog.State[Keys.Name]}?",
+                        new PromptOptions
                         {
                             RetryPromptString = "I'm sorry, should I make the reservation for you? " +
                             "Please enter `yes` or `no`.",
@@ -195,27 +236,34 @@ namespace ContosoCafe
                 },
                 async (dc, args, next) =>
                 {
-                    // Finish up booking a table.
+                    // Book the table or cancel the reservation.
                     var confirmed = (bool)args["Confirmation"];
-
                     if (confirmed)
                     {
-                        // Send a confirmation message.
+                        // Send a confirmation message: the typing activity indicates to the user that
+                        // the bot is working on something, the delay simulates a process (filing the reservation)
+                        // that takes some time, and the message simulates a confirmation message generated
+                        // by the process.
                         var typing = Activity.CreateTypingActivity();
                         var delay = new Activity { Type = "delay", Value = 3000 };
-                        await dc.Context.SendActivities(
+                        await dc.Context.SendActivitiesAsync(
                             new IActivity[]
                             {
                                 typing, delay,
-                                MessageFactory.Text("Your table is booked. Reference number: #K89HG38SZ")
+                                MessageFactory.Text("Your table is booked. Reference number: #K89HG38SZ"),
                             });
+
+                        // As part of the process to fill the reservation, the relevant data would be persisted
+                        // in the reservation system.
                     }
                     else
                     {
-                        // Decide what to do if they say no at this point.
-                        await dc.Context.SendActivity("Okay. We have canceled the reservation.");
+                        // Cancel the reservation.
+                        await dc.Context.SendActivityAsync("Okay. We have canceled the reservation.");
                     }
-                }
+
+                    await dc.EndAsync();
+                },
             });
         }
     }
