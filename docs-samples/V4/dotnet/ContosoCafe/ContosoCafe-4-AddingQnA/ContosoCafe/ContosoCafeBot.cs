@@ -9,7 +9,7 @@ namespace ContosoCafe
     using System.Threading;
     using System.Threading.Tasks;
     using Microsoft.Bot.Builder;
-    using Microsoft.Bot.Builder.Ai.QnA;
+    using Microsoft.Bot.Builder.AI.QnA;
     using Microsoft.Bot.Builder.TraceExtensions;
     using Microsoft.Bot.Schema;
     using Newtonsoft.Json.Linq;

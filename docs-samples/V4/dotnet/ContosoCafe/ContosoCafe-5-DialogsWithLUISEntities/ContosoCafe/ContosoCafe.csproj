@@ -6,10 +6,10 @@
 
   <ItemGroup>
     <PackageReference Include="Microsoft.AspNetCore.All" Version="2.0.5" />
-    <PackageReference Include="Microsoft.Bot.Builder.Ai.LUIS" Version="4.0.0.36052" />
-    <PackageReference Include="Microsoft.Bot.Builder.Ai.QnA" Version="4.0.0.36052" />
-    <PackageReference Include="Microsoft.Bot.Builder.Dialogs" Version="4.0.0.36052" />
-    <PackageReference Include="Microsoft.Bot.Builder.Integration.AspNet.Core" Version="4.0.0.36052" />
+    <PackageReference Include="Microsoft.Bot.Builder.Ai.LUIS" Version="4.0.0.37745" />
+    <PackageReference Include="Microsoft.Bot.Builder.Ai.QnA" Version="4.0.0.37745" />
+    <PackageReference Include="Microsoft.Bot.Builder.Dialogs" Version="4.0.0.37745" />
+    <PackageReference Include="Microsoft.Bot.Builder.Integration.AspNet.Core" Version="4.0.0.37745" />
     <PackageReference Include="Microsoft.Extensions.DependencyInjection.Abstractions" Version="2.0.0" />
     <PackageReference Include="Microsoft.Recognizers.Text.DataTypes.TimexExpression" Version="1.0.7" />
   </ItemGroup>

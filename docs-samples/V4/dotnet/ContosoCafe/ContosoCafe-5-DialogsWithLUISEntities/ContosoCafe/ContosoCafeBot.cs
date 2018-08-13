@@ -1,97 +1,91 @@
-﻿using Microsoft.Bot.Builder;
-using Microsoft.Bot.Builder.Ai.LUIS;
-using Microsoft.Bot.Builder.Ai.QnA;
-using Microsoft.Bot.Builder.TraceExtensions;
-using Microsoft.Bot.Schema;
-using Microsoft.Extensions.Configuration;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Threading;
-using System.Threading.Tasks;
+﻿// Copyright (c) Microsoft Corporation. All rights reserved.
+// Licensed under the MIT License
 
 namespace ContosoCafe
 {
+    using System;
+    using System.Collections.Generic;
+    using System.Linq;
+    using System.Threading;
+    using System.Threading.Tasks;
+    using Microsoft.Bot.Builder;
+    using Microsoft.Bot.Builder.AI.Luis;
+    using Microsoft.Bot.Builder.AI.QnA;
+    using Microsoft.Bot.Builder.TraceExtensions;
+    using Microsoft.Bot.Schema;
+
+    /// <summary>Defines the Contoso Cafe bot.</summary>
     public class ContosoCafeBot : IBot
     {
         /// <summary>
-        /// A template help message.
+        /// Gets a template help message.
         /// </summary>
         private static IActivity HelpResponse { get; }
             = MessageFactory.Text("Type `book a table` to make a reservation.");
 
         /// <summary>
-        /// A template "I don't understand" message.
+        /// Gets a template "I don't understand" message.
         /// </summary>
         private static IActivity DontKnowResponse { get; }
             = MessageFactory.Text("I'm sorry, I don't understand.\n\n" +
                 "Type `book a table` to make a reservation.");
 
         /// <summary>
-        /// The set of phrases we recognize as the user cancelling a multi-step
+        /// Gets the set of phrases we recognize as the user cancelling a multi-step
         /// conversation flow.
         /// </summary>
         private static IEnumerable<string> CancelPhrases { get; }
             = new HashSet<string> { "cancel", "start over", "stop" };
 
         /// <summary>
-        /// Singleton reference to the Contoso Cafe QnA service and knowledgebase.
+        /// Gets state property accessors.
+        /// </summary>
+        private IStatePropertyAccessor<ConversationData> ConvAccessor { get; }
+
+        private BookATable TableDialog { get; } = new BookATable();
+
+        /// <summary>
+        /// Gets the Contoso Cafe QnA service and knowledgebase.
         /// </summary>
         private QnAMaker QnA { get; } = null;
 
         /// <summary>
-        /// Singleton reference to the Contoso Cafe LUIS app and model.
+        /// Gets the Contoso Cafe LUIS app and model.
         /// </summary>
         private LuisRecognizer Recognizer { get; } = null;
 
         /// <summary>
-        /// A bot constructor that takes a configuration object.
+        /// Initializes a new instance of the <see cref="ContosoCafeBot"/> class.
         /// </summary>
-        /// <param name="configuration">A configuration object containing information from our appsettings.json file.</param>
-        public ContosoCafeBot(IConfiguration configuration)
+        /// <param name="accessors">State property accessors.</param>
+        /// <param name="qna">The Contoso Cafe QnA service and knowledgebase.</param>
+        /// <param name="luis">The Contoso Cafe LUIS app and model.</param>
+        public ContosoCafeBot(StateAccessors accessors, QnAMaker qna, LuisRecognizer luis)
         {
-            // Create the QnA Maker instance.
-            var hostname = configuration["QnAHostname"];
-            var endpointKey = configuration["QnAEndpoint"];
-            var knowledgebaseId = configuration["QnAKnowledgebaseId"];
-            var scoreThreshold = float.Parse(configuration["QnAScoreThreshold"]);
-            QnA = new QnAMaker(
-                new QnAMakerEndpoint
-                {
-                    EndpointKey = endpointKey,
-                    Host = hostname,
-                    KnowledgeBaseId = knowledgebaseId
-                },
-                new QnAMakerOptions { ScoreThreshold = scoreThreshold }
-            );
-
-            // Create the LUIS recognizer for our model.
-            var luisRecognizerOptions = new LuisRecognizerOptions { Verbose = true };
-            var luisModel = new LuisModel(
-                configuration["LuisModel"],
-                configuration["LuisSubscriptionKey"],
-                new Uri(configuration["LuisUriBase"]),
-                LuisApiVersion.V2);
-            Recognizer = new LuisRecognizer(luisModel, luisRecognizerOptions, null);
+            this.ConvAccessor = accessors?.ConvData ?? throw new ArgumentNullException(nameof(accessors));
+            this.QnA = qna ?? throw new ArgumentNullException(nameof(qna));
+            this.Recognizer = luis ?? throw new ArgumentNullException(nameof(luis));
         }
 
         /// <summary>
         /// Handles incoming activities from a user's channel.
         /// </summary>
         /// <param name="context">The context object for this turn.</param>
-        public async Task OnTurn(ITurnContext context)
+        /// <param name="token">blah.</param>
+        /// <returns>A <see cref="Task"/> representing the asynchronous operation.</returns>
+        public async Task OnTurnAsync(ITurnContext context, CancellationToken token = default(CancellationToken))
         {
             // Handle message and non-message activities differently.
             if (context.Activity.Type != ActivityTypes.Message)
             {
                 // Handle any non-message activity.
-                await HandleSystemActivity(context);
+                await this.HandleSystemActivity(context);
             }
             else
             {
                 // Get conversation state and establish a dialog context.
-                var state = ConversationState<ConversationData>.Get(context);
-                var dc = BookATable.Instance.CreateContext(context, state.DialogState);
+                var data = await this.ConvAccessor.GetAsync(context, () => new ConversationData());
+                var dc = this.TableDialog.CreateContext(context, data.DialogState);
 
                 // Capture any input text.
                 var text = context.Activity.AsMessageActivity()?.Text?.Trim().ToLowerInvariant();
@@ -103,22 +97,23 @@ namespace ContosoCafe
                     dc.EndAll();
 
                     // Send a cancellation message and finish turn.
-                    await context.SendActivity("Sure.. Let's start over");
+                    await context.SendActivityAsync("Sure.. Let's start over");
                 }
 
                 if (!context.Responded)
                 {
                     // Continue any active dialog. If there's no active dialog, this is a no-op.
-                    await dc.Continue();
+                    await dc.ContinueAsync();
                 }
 
                 if (!context.Responded)
                 {
                     // Use LUIS to extract intent from the user's input text.
-                    var result = await Recognizer.Recognize<CafeLuisModel>(text, new CancellationToken());
+                    var result = await this.Recognizer.RecognizeAsync<CafeLuisModel>(context, CancellationToken.None);
 
                     // Handle the user's input based on the extracted intent.
-                    switch (result.TopIntent().intent)
+                    var (intent, score) = result.TopIntent();
+                    switch (intent)
                     {
                         case CafeLuisModel.Intent.Reservation:
                             // Start the "book a table" dialog. Pass in any entities that our LUIS model captured.
@@ -127,12 +122,13 @@ namespace ContosoCafe
                             {
                                 dialogArgs.Add(BookATable.Keys.LuisArgs, result.Entities);
                             }
-                            await dc.Begin(nameof(BookATable), dialogArgs);
+
+                            await dc.BeginAsync(nameof(BookATable), dialogArgs);
                             break;
 
                         case CafeLuisModel.Intent.Help:
                             // Provide some guidance to the user.
-                            await context.SendActivity(HelpResponse);
+                            await context.SendActivityAsync(HelpResponse);
                             break;
 
                         case CafeLuisModel.Intent.None:
@@ -144,24 +140,24 @@ namespace ContosoCafe
                 if (!context.Responded)
                 {
                     // Field any questions the user has asked.
-                    var answers = await QnA.GetAnswers(text);
+                    var answers = await this.QnA.GetAnswersAsync(context);
                     if (answers is null)
                     {
                         // Output trace information to the Emulator.
                         // This does not generate a response to the user.
-                        await context.TraceActivity("Call to the QnA Maker service failed.");
+                        await context.TraceActivityAsync("Call to the QnA Maker service failed.");
                     }
                     else if (answers.Any())
                     {
                         // If the service produced one or more answers, send the first one.
-                        await context.SendActivity(answers[0].Answer);
+                        await context.SendActivityAsync(answers[0].Answer);
                     }
                 }
 
                 if (!context.Responded)
                 {
                     // Provide a default response for anything we don't understand.
-                    await context.SendActivity(DontKnowResponse);
+                    await context.SendActivityAsync(DontKnowResponse);
                 }
             }
         }
@@ -182,13 +178,14 @@ namespace ContosoCafe
                     var update = context.Activity.AsConversationUpdateActivity();
                     if (update.MembersAdded.Any(member => member.Id != update.Recipient.Id))
                     {
-                        await context.SendActivities(
+                        await context.SendActivitiesAsync(
                             new IActivity[]
                             {
                                 MessageFactory.Text("Hello, I'm the Contoso Cafe bot."),
-                                MessageFactory.Text("How can I help you? (Type `book a table` to set up a table reservation.)")
+                                MessageFactory.Text("How can I help you? (Type `book a table` to set up a table reservation.)"),
                             });
                     }
+
                     break;
             }
         }

@@ -5,30 +5,30 @@
 // regenerated.
 // </auto-generated>
 using Microsoft.Bot.Builder;
-using Microsoft.Bot.Builder.Ai.LUIS;
 using Newtonsoft.Json;
 using System.Collections.Generic;
 namespace ContosoCafe
 {
-    public class CafeLuisModel: IRecognizerConvert
+    public class CafeLuisModel : IRecognizerConvert
     {
         public string Text;
         public string AlteredText;
-        public enum Intent {
-            Help, 
-            Reservation, 
+        public enum Intent
+        {
+            Help,
+            Reservation,
             None
         };
-        public Dictionary<Intent, IntentData> Intents;
+        public Dictionary<Intent, IntentScore> Intents;
 
         public class _Entities
         {
             // Simple entities
+            public string[] partySize;
             public string[] reservationName;
 
             // Built-in entities
-            public DateTimeSpec[] datetime;
-            public double[] number;
+            public Microsoft.Bot.Builder.AI.Luis.DateTimeSpec[] datetime;
 
             // Lists
             public string[][] location;
@@ -36,10 +36,10 @@ namespace ContosoCafe
             // Instance
             public class _Instance
             {
-                public InstanceData[] reservationName;
-                public InstanceData[] datetime;
-                public InstanceData[] number;
-                public InstanceData[] location;
+                public Microsoft.Bot.Builder.AI.Luis.InstanceData[] partySize;
+                public Microsoft.Bot.Builder.AI.Luis.InstanceData[] reservationName;
+                public Microsoft.Bot.Builder.AI.Luis.InstanceData[] datetime;
+                public Microsoft.Bot.Builder.AI.Luis.InstanceData[] location;
             }
             [JsonProperty("$instance")]
             public _Instance _instance;
@@ -47,7 +47,7 @@ namespace ContosoCafe
         public _Entities Entities;
 
         [JsonExtensionData(ReadData = true, WriteData = true)]
-        public IDictionary<string, object> Properties {get; set; }
+        public IDictionary<string, object> Properties { get; set; }
 
         public void Convert(dynamic result)
         {
@@ -68,7 +68,7 @@ namespace ContosoCafe
                 if (entry.Value.Score > max)
                 {
                     maxIntent = entry.Key;
-                    max = entry.Value.Score;
+                    max = entry.Value.Score.Value;
                 }
             }
             return (maxIntent, max);

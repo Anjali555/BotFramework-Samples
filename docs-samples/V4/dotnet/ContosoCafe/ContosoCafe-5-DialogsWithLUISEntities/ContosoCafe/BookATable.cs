@@ -1,46 +1,52 @@
-﻿using Microsoft.Bot.Builder;
-using Microsoft.Bot.Builder.Dialogs;
-using Microsoft.Bot.Builder.Dialogs.Choices;
-using Microsoft.Bot.Schema;
-using Microsoft.Recognizers.Text;
-using Microsoft.Recognizers.Text.DataTypes.TimexExpression;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Threading.Tasks;
+﻿// Copyright (c) Microsoft Corporation. All rights reserved.
+// Licensed under the MIT License
 
 namespace ContosoCafe
 {
+    using System;
+    using System.Collections.Generic;
+    using System.Linq;
+    using System.Threading.Tasks;
+    using Microsoft.Bot.Builder;
+    using Microsoft.Bot.Builder.Dialogs;
+    using Microsoft.Bot.Builder.Dialogs.Choices;
+    using Microsoft.Bot.Builder.TraceExtensions;
+    using Microsoft.Bot.Schema;
+    using Microsoft.Recognizers.Text;
+    using Microsoft.Recognizers.Text.DataTypes.TimexExpression;
+
     /// <summary>
     /// Defines the dialog for booking a table.
     /// </summary>
     public class BookATable : DialogSet
     {
         /// <summary>
-        /// Defines a singleton instance of the dialog.
-        /// </summary>
-        public static BookATable Instance { get; } = new Lazy<BookATable>(new BookATable()).Value;
-
-        /// <summary>
         /// The names of the inputs and prompts in this dialog.
         /// </summary>
         /// <remarks>We'll store the information gathered using these same names.</remarks>
         public struct Keys
         {
-            /// <summary>
-            ///  Key to use for LUIS entities as input.
-            /// </summary>
+            /// <summary>Key to use for LUIS entities as input.</summary>
             public const string LuisArgs = "LuisEntities";
 
+            /// <summary>Key to use for location.</summary>
             public const string Location = "location";
+
+            /// <summary>Key to use for reservation date.</summary>
             public const string DateTime = "dateTime";
+
+            /// <summary>Key to use for party size.</summary>
             public const string Guests = "numberOfGuests";
+
+            /// <summary>Key to use for reservation name.</summary>
             public const string Name = "reservationName";
+
+            /// <summary>Key to use for the confirm prompt.</summary>
             public const string Confirm = "confirmation";
         }
 
         /// <summary>
-        /// The list of store locations.
+        /// Gets the list of store locations.
         /// </summary>
         public static IReadOnlyList<string> Locations { get; } =
             new List<string> { "Bellevue", "Redmond", "Renton", "Seattle" };
@@ -50,7 +56,7 @@ namespace ContosoCafe
         /// </summary>
         /// <param name="context">The current turn context.</param>
         /// <param name="toValidate">The input to be validated.</param>
-        /// <returns>An updated <paramref name="toValidate"/> value that sets the object's 
+        /// <returns>An updated <paramref name="toValidate"/> value that sets the object's
         /// Prompt status to indicate whether the value validates.</returns>
         /// <remarks>Valid dates are evenings within the next 2 weeks.</remarks>
         private static Task DateTimeValidator(ITurnContext context, DateTimeResult toValidate)
@@ -92,7 +98,7 @@ namespace ContosoCafe
             var constraints = new[]
             {
                 TimexCreator.NextWeeksFromToday(2),
-                TimexCreator.Evening
+                TimexCreator.Evening,
             };
             List<TimexProperty> resolutions = null;
             try
@@ -116,7 +122,7 @@ namespace ContosoCafe
                 Start = timex.ToNaturalLanguage(DateTime.Now),
                 End = timex.ToNaturalLanguage(DateTime.Now),
                 Value = timex.ToNaturalLanguage(DateTime.Now),
-                Timex = timex.TimexValue
+                Timex = timex.TimexValue,
             };
         }
 
@@ -125,7 +131,7 @@ namespace ContosoCafe
         /// </summary>
         /// <param name="context">The current turn context.</param>
         /// <param name="toValidate">The input to be validated.</param>
-        /// <returns>An updated <paramref name="toValidate"/> value that sets the object's 
+        /// <returns>An updated <paramref name="toValidate"/> value that sets the object's
         /// Prompt status to indicate whether the value validates.</returns>
         /// <remarks>Valid party sizes are 1 through 12.</remarks>
         private static Task GuestsValidator(ITurnContext context, NumberResult<int> toValidate)
@@ -147,74 +153,86 @@ namespace ContosoCafe
         }
 
         /// <summary>
-        /// Creates a new dialog instance.
+        /// Initializes a new instance of the <see cref="BookATable"/> class.
         /// </summary>
-        private BookATable()
+        public BookATable()
         {
             // Add the prompts we'll be using in our dialog.
-            Add(Keys.Location, new ChoicePrompt(Culture.English));
-            Add(Keys.DateTime, new DateTimePrompt(Culture.English, DateTimeValidator));
-            Add(Keys.Guests, new NumberPrompt<int>(Culture.English, GuestsValidator));
-            Add(Keys.Name, new TextPrompt());
-            Add(Keys.Confirm, new ConfirmPrompt(Culture.English));
+            this.Add(Keys.Location, new ChoicePrompt(Culture.English));
+            this.Add(Keys.DateTime, new DateTimePrompt(Culture.English, DateTimeValidator));
+            this.Add(Keys.Guests, new NumberPrompt<int>(Culture.English, GuestsValidator));
+            this.Add(Keys.Name, new TextPrompt());
+            this.Add(Keys.Confirm, new ConfirmPrompt(Culture.English));
 
             // Define and add the waterfall steps for our dialog.
-            Add(nameof(BookATable), new WaterfallStep[]
+            this.Add(nameof(BookATable), BookATableSteps);
+        }
+
+        private static WaterfallStep[] BookATableSteps { get; } =
+            new WaterfallStep[]
             {
                 // Begin booking a table.
                 async (dc, args, next) =>
                 {
                     // Initialize state.
-                    if(args!=null && args.ContainsKey(Keys.LuisArgs))
+                    if (args != null
+                        && args.ContainsKey(Keys.LuisArgs)
+                        && args[Keys.LuisArgs] is CafeLuisModel._Entities entities)
                     {
                         // Add any LUIS entities to the active dialog state.
-                        // Remove any values that don't validate, and convert the remainder to a dictionary.
-                        var entities = (CafeLuisModel._Entities)args[Keys.LuisArgs];
-                        dc.ActiveDialog.State = ValidateLuisArgs(entities);
+                        dc.ActiveDialog.State = await AddLuisArguments(entities, dc.Context);
                     }
                     else
                     {
                         // Begin without any information collected.
-                        dc.ActiveDialog.State = new Dictionary<string,object>();
+                        dc.ActiveDialog.State = new Dictionary<string, object>();
                     }
 
-                    if (dc.ActiveDialog.State.ContainsKey(Keys.Location))
+                    // If we already have a valid location, use it.
+                    if (dc.ActiveDialog.State.ContainsKey(Keys.Location)
+                        && ValidateLocation(dc.ActiveDialog.State[Keys.Location], out string location))
                     {
-                        // If we already have the location, continue on to the next waterfall step.
+                        dc.ActiveDialog.State[Keys.Location] = location;
                         await next();
                     }
                     else
                     {
-                        // Otherwise, query for location.
+                        // Otherwise, prompt for location.
                         var retryPrompt = MessageFactory.SuggestedActions(
                             Locations.ToList(), text: "Please select one of our locations.") as Activity;
-                        await dc.Prompt(Keys.Location,
-                            "Did you have a location in mind?", new ChoicePromptOptions
+                        await dc.PromptAsync(
+                            Keys.Location,
+                            "Did you have a location in mind?",
+                            new ChoicePromptOptions
                             {
                                 RetryPromptActivity = retryPrompt,
-                                Choices = ChoiceFactory.ToChoices(new List<string>(Locations))
+                                Choices = ChoiceFactory.ToChoices(new List<string>(Locations)),
                             });
                     }
                 },
                 async (dc, args, next) =>
                 {
-                    if (!dc.ActiveDialog.State.ContainsKey(Keys.Location))
+                    // If we prompted for a value in the previous turn.
+                    if (args != null && args.ContainsKey("Value") && args["Value"] is FoundChoice answer)
                     {
                         // Update state with the prompt result.
-                        var answer = args["Value"] as FoundChoice;
                         dc.ActiveDialog.State[Keys.Location] = answer.Value;
                     }
 
-                    if (dc.ActiveDialog.State.ContainsKey(Keys.DateTime))
+                    // If we already have a valid reservation date, use it.
+                    if (dc.ActiveDialog.State.ContainsKey(Keys.DateTime)
+                        && ValidateDate(dc.ActiveDialog.State[Keys.DateTime], out string date))
                     {
-                        // If we already have the reservation date and time, continue on to the next waterfall step.
+                        dc.ActiveDialog.State[Keys.DateTime] = date;
                         await next();
                     }
                     else
                     {
-                        // Otherwise, query for the reservation date and time.
-                        await dc.Prompt(Keys.DateTime,
-                            "When will the reservation be for?", new PromptOptions
+                        // Otherwise, prompt for the reservation date and time.
+                        await dc.PromptAsync(
+                            Keys.DateTime,
+                            "When will the reservation be for?",
+                            new PromptOptions
                             {
                                 RetryPromptString = "Please enter a date and time for the reservation.\n\n" +
                                 "We take reservations within two weeks of today, and evenings only.",
@@ -223,25 +241,30 @@ namespace ContosoCafe
                 },
                 async (dc, args, next) =>
                 {
-                    if (!dc.ActiveDialog.State.ContainsKey(Keys.DateTime))
+                    // If we prompted for a value in the previous turn.
+                    if (args != null && args.ContainsKey("Resolution")
+                        && args["Resolution"] is List<DateTimeResult.DateTimeResolution> resolutions)
                     {
                         // Update state with the prompt result.
                         // The prompt can return multiple interpretations of the time entered.
                         // For now, just use the first one.
-                        var answer = args["Resolution"] as List<DateTimeResult.DateTimeResolution>;
-                        dc.ActiveDialog.State[Keys.DateTime] = answer[0].Value;
+                        dc.ActiveDialog.State[Keys.DateTime] = resolutions[0].Value;
                     }
 
-                    if (dc.ActiveDialog.State.ContainsKey(Keys.Guests))
+                    // If we already have a valid party size, use it.
+                    if (dc.ActiveDialog.State.ContainsKey(Keys.Guests)
+                        && ValidatePartySize(dc.ActiveDialog.State[Keys.Guests], out int guests))
                     {
-                        // If we already have the number of guests, continue on to the next waterfall step.
+                        dc.ActiveDialog.State[Keys.Guests] = guests;
                         await next();
                     }
                     else
                     {
-                        // Otherwise, query for the information.
-                        await dc.Prompt(Keys.Guests,
-                            "How many guests?", new PromptOptions
+                        // Otherwise, prompt for the party size.
+                        await dc.PromptAsync(
+                            Keys.Guests,
+                            "How many guests?",
+                            new PromptOptions
                             {
                                 RetryPromptString = "Please enter the number of people that the reservation is for.\n\n" +
                                 "We can take reservations for parties of up to 12.",
@@ -250,23 +273,27 @@ namespace ContosoCafe
                 },
                 async (dc, args, next) =>
                 {
-                    if (!dc.ActiveDialog.State.ContainsKey(Keys.Guests))
+                    // If we prompted for a value in the previous turn.
+                    if (args != null && args.ContainsKey("Value") && args["Value"] is int guests)
                     {
                         // Update state from the prompt result.
-                        var answer = (int)args["Value"];
-                        dc.ActiveDialog.State[Keys.Guests] = answer;
+                        dc.ActiveDialog.State[Keys.Guests] = guests;
                     }
 
-                    if (dc.ActiveDialog.State.ContainsKey(Keys.Name))
+                    // If we already have a reservation name, use it.
+                    if (dc.ActiveDialog.State.ContainsKey(Keys.Name)
+                        && ValidateReservationName(dc.ActiveDialog.State[Keys.Name], out string name))
                     {
-                        // If we already have the reservation name, continue on to the next waterfall step.
+                        dc.ActiveDialog.State[Keys.Name] = name;
                         await next();
                     }
                     else
                     {
-                        // Otherwise, query for the information.
-                        await dc.Prompt(Keys.Name,
-                            "What name should I book the table under?", new PromptOptions
+                        // Otherwise, prompt for the reservtion name.
+                        await dc.PromptAsync(
+                            Keys.Name,
+                            "What name should I book the table under?",
+                            new PromptOptions
                             {
                                 RetryPromptString = "Please enter a name for the reservation.",
                             });
@@ -274,20 +301,22 @@ namespace ContosoCafe
                 },
                 async (dc, args, next) =>
                 {
-                    if (!dc.ActiveDialog.State.ContainsKey(Keys.Name))
+                    // If we prompted for a value in the previous turn.
+                    if (args != null && args.ContainsKey("Value") && args["Value"] is string name)
                     {
                         // Update state from the prompt result.
-                        var answer = args["Value"] as string;
-                        dc.ActiveDialog.State[Keys.Name] = answer;
+                        dc.ActiveDialog.State[Keys.Name] = name;
                     }
 
                     // Confirm the reservation.
-                    await dc.Prompt(Keys.Confirm,
+                    await dc.PromptAsync(
+                        Keys.Confirm,
                         $"Ok. Should I go ahead and book a table " +
-                        $"for {dc.ActiveDialog.State[Keys.Guests]} " +
-                        $"at {dc.ActiveDialog.State[Keys.Location]} " +
-                        $"for {dc.ActiveDialog.State[Keys.DateTime]} " +
-                        $"for {dc.ActiveDialog.State[Keys.Name]}?", new PromptOptions
+                            $"for {dc.ActiveDialog.State[Keys.Guests]} " +
+                            $"at {dc.ActiveDialog.State[Keys.Location]} " +
+                            $"for {dc.ActiveDialog.State[Keys.DateTime]} " +
+                            $"for {dc.ActiveDialog.State[Keys.Name]}?",
+                        new PromptOptions
                         {
                             RetryPromptString = "I'm sorry, should I make the reservation for you? " +
                             "Please enter `yes` or `no`.",
@@ -305,76 +334,139 @@ namespace ContosoCafe
                         // by the process.
                         var typing = Activity.CreateTypingActivity();
                         var delay = new Activity { Type = "delay", Value = 3000 };
-                        await dc.Context.SendActivities(
+                        await dc.Context.SendActivitiesAsync(
                             new IActivity[]
                             {
                                 typing, delay,
-                                MessageFactory.Text("Your table is booked. Reference number: #K89HG38SZ")
+                                MessageFactory.Text("Your table is booked. Reference number: #K89HG38SZ"),
                             });
 
                         // As part of the process to fill the reservation, the relevant data would be persisted
-                        // in the reservation system. Here, we are saving the dialog state to conversations state
-                        // as a simulation of this process.
-                        var conversationState = ConversationState<ConversationData>.Get(dc.Context);
-                        conversationState.ReservationData = new Dictionary<string,object>(dc.ActiveDialog.State);
+                        // in the reservation system.
                     }
                     else
                     {
                         // Cancel the reservation.
-                        await dc.Context.SendActivity("Okay. We have canceled the reservation.");
+                        await dc.Context.SendActivityAsync("Okay. We have canceled the reservation.");
                     }
-                }
-            });
-        }
+
+                    await dc.EndAsync();
+                },
+            };
 
         /// <summary>
-        /// Check whether each entity is valid and return valid ones in a dictionary.
+        /// Create a dictionary of potentially valid input from LUIS.
         /// </summary>
         /// <param name="entities">The LUIS entities from the input arguments.</param>
-        /// <returns>A dictionary of the valid entities.</returns>
-        private Dictionary<string, object> ValidateLuisArgs(CafeLuisModel._Entities entities)
+        /// <param name="context">The current turn context.</param>
+        /// <returns>A dictionary of the potentially valid entities.</returns>
+        private static async Task<Dictionary<string, object>> AddLuisArguments(CafeLuisModel._Entities entities, ITurnContext context)
         {
             var result = new Dictionary<string, object>();
+            if (entities is null)
+            {
+                return result;
+            }
 
             // Check location.
-            if (Locations.Contains(entities?.location?[0]?[0], StringComparer.InvariantCultureIgnoreCase))
+            if (Locations.Contains(entities.location?[0]?[0], StringComparer.InvariantCultureIgnoreCase))
             {
-                result[Keys.Location] = entities.location[0][0] as string;
+                var name = entities.location[0][0];
+                await context.TraceActivityAsync($"Found '{name}' for location.");
+                result[Keys.Location] = name;
             }
 
             // Check time.
-            if (entities?.datetime?.FirstOrDefault()?.Expressions.Any() is true)
+            if (entities.datetime?.FirstOrDefault()?.Expressions.Any() is true)
             {
-                var candidates = entities.datetime[0].Expressions;
-                var resolution = ResolveTime(candidates);
-                if (resolution != null)
-                {
-                    result[Keys.DateTime] = resolution.Value;
-                }
+                var dates = entities.datetime[0].Expressions;
+                await context.TraceActivityAsync($"Found {{{string.Join(',', dates)}}} for reservation date.");
+                result[Keys.DateTime] = dates.ToList();
             }
 
             // Check number of guests.
-            if (entities?.number?.Any() is true)
+            if (entities.partySize?.Any() is true)
             {
-                var number = entities.number.FirstOrDefault(n => n > 0 && n < 13);
-                if (number != 0)
+                var guests = new List<int>();
+                foreach (var entity in entities.partySize)
                 {
-                    // LUIS recognizes numbers as doubles. Convert to int.
-                    result[Keys.Guests] = Convert.ToInt32(number);
+                    if (int.TryParse(entity, out int value))
+                    {
+                        guests.Add(value);
+                    }
+                }
+
+                if (guests.Any())
+                {
+                    await context.TraceActivityAsync($"Found {{{string.Join(',', guests)}}} for number of guests.");
+                    result[Keys.Guests] = guests;
                 }
             }
 
             // Check reservation name.
-            if (entities?.reservationName?.Any() is true)
+            if (entities.reservationName?.Any() is true)
             {
-                var name = entities.reservationName.FirstOrDefault(n => !string.IsNullOrWhiteSpace(n));
-                if (name != null)
+                var names = entities.reservationName.Where(n => !string.IsNullOrWhiteSpace(n)).Select(n => n.Trim());
+                if (names.Any())
                 {
-                    result[Keys.Name] = name;
+                    await context.TraceActivityAsync($"Found {{{string.Join(',', names)}}} for reservation name.");
+                    result[Keys.Name] = names.ToList();
                 }
             }
 
             return result;
+        }
+
+        private static bool ValidateLocation(object value, out string location)
+        {
+            if (value is string name && Locations.Contains(name, StringComparer.InvariantCultureIgnoreCase))
+            {
+                location = name;
+                return true;
+            }
+
+            location = null;
+            return false;
+        }
+
+        private static bool ValidateDate(object value, out string date)
+        {
+            if (value is IEnumerable<string> dates)
+            {
+                var resolution = ResolveTime(dates);
+                if (resolution != null)
+                {
+                    date = resolution.Value;
+                    return true;
+                }
+            }
+
+            date = null;
+            return false;
+        }
+
+        private static bool ValidatePartySize(object value, out int guests)
+        {
+            if (value is IEnumerable<int> list)
+            {
+                guests = list.FirstOrDefault(x => x >= 1 && x <= 12);
+                return guests > 0;
+            }
+
+            guests = 0;
+            return false;
+        }
+
+        private static bool ValidateReservationName(object value, out string name)
+        {
+            if (value is IEnumerable<string> list && list.Any())
+            {
+                name = list.First();
+                return true;
+            }
+
+            name = null;
+            return false;
         }
     }
 }
