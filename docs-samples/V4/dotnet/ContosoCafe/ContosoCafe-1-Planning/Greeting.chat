@@ -1,5 +1,7 @@
 user=Jeffery
 bot=cafebot
 
+[ConversationUdate=
+    MembersAdded=user,bot]
 bot: Hello, I'm the contoso cafe bot.
 bot: How can I help you? (Type `book a table` to set up a table reservation.)
