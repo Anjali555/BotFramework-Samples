@@ -9,14 +9,11 @@ namespace ReferenceBot
 {
     public class EchoBot : IBot
     {
-        /// <summary>
-        /// Gets the state property accessors for the bot.
-        /// </summary>
-        private StateAccessors Accessors { get; }
+        private IStatePropertyAccessor<EchoState> EchoStateAccessor { get; }
 
-        public EchoBot(StateAccessors accessors)
+        public EchoBot(ConversationState state)
         {
-            Accessors = accessors ?? throw new ArgumentNullException(nameof(accessors));
+            EchoStateAccessor = state.CreateProperty<EchoState>("EchoBot.EchoState");
         }
 
         /// <summary>
@@ -36,7 +33,7 @@ namespace ReferenceBot
             if (turnContext.Activity.Type == ActivityTypes.Message)
             {
                 // Get the conversation state from the turn context.
-                var state = await Accessors.PropertyAccessor.GetAsync(turnContext, () => new EchoState());
+                var state = await EchoStateAccessor.GetAsync(turnContext, () => new EchoState());
 
                 // Bump the turn count. 
                 state.TurnCount++;

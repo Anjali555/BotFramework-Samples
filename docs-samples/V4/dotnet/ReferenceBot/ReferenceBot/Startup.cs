@@ -52,18 +52,10 @@ namespace ReferenceBot
             // Create and register state accessors.
             services.AddSingleton(sp =>
             {
-                var options = sp.GetRequiredService<IOptions<BotFrameworkOptions>>().Value
-                    ?? throw new InvalidOperationException(
-                        "BotFrameworkOptions must be configured prior to setting up the state accessors.");
+                var options = sp.GetRequiredService<IOptions<BotFrameworkOptions>>().Value;
+                var convState = options.Middleware.OfType<ConversationState>().FirstOrDefault();
 
-                var convState = options.Middleware.OfType<ConversationState>().FirstOrDefault()
-                    ?? throw new InvalidOperationException(
-                        "Conversation state must be defined and added before adding conversation-scoped state accessors.");
-
-                return new StateAccessors
-                {
-                    PropertyAccessor = convState.CreateProperty<EchoState>(StateAccessors.key),
-                };
+                return convState;
             });
         }
 
