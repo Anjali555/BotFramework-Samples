@@ -1,0 +1,15 @@
+{
+    "name": "WebAppEchoBot",
+    "description": "",
+    "secretKey": "",
+    "services": [
+        {
+            "type": "endpoint",
+            "name": "http://localhost:52403/api/messages",
+            "id": "http://localhost:52403/api/messages",
+            "appId": "",
+            "appPassword": "",
+            "endpoint": "http://localhost:52403/api/messages"
+        }
+    ]
+}
